@@ -395,6 +395,7 @@
     <div class="status-bar">
       <div class="indicator" id="dot"></div>
       <span id="status-text">Camera off</span>
+      <span id="debug-txt" style="font-size:.75rem;color:var(--muted);margin-left:auto;margin-right:8px"></span>
       <span>Photos: <span id="capture-count">0</span></span>
     </div>
   </div>
@@ -480,17 +481,19 @@
   const analysisCtx = analysisCvs.getContext('2d', { willReadFrequently: true });
   const captCtx     = captCvs.getContext('2d');
   const graphCtx    = graphCvs.getContext('2d');
+  const debugTxt    = document.getElementById('debug-txt');
 
   /* ── State ── */
   let stream          = null;
   let watching        = false;
   let rafId           = null;
   let lastCaptureTime = 0;
-  let photos          = [];           // { dataUrl, ts }
-  let brightHistory   = [];           // rolling array for graph
+  let photos          = [];
+  let brightHistory   = [];
   const HIST_LEN      = 200;
-  let rollingAvg      = -1;           // initialised on first frame
-  const SMOOTH        = 0.06;         // EMA factor for rolling average
+  let rollingAvg      = -1;
+  const SMOOTH        = 0.05;
+  const MIN_ABS_DELTA = 18; // absolute brightness jump required (0-255) to filter camera noise
 
   /* ── Graph setup ── */
   function resizeGraph() {
@@ -546,13 +549,14 @@
     dot.className     = 'indicator watching';
     setStatus('Watching for lightning…');
 
-    loop();
+    analyzeFrame(); // kick off via rVFC or RAF
   }
 
   function stopWatching() {
     watching = false;
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    debugTxt.textContent = '';
     video.srcObject = null;
     btnStart.disabled = false;
     btnStop.disabled  = true;
@@ -560,18 +564,25 @@
     setStatus('Camera off');
   }
 
-  /* ── Main analysis loop ── */
-  function loop() {
+  /* ── Analysis — called on every real camera frame ── */
+  function analyzeFrame() {
     if (!watching) return;
-    rafId = requestAnimationFrame(loop);
+
+    // Use requestVideoFrameCallback if available (fires on each new camera frame)
+    // Fall back to requestAnimationFrame
+    if ('requestVideoFrameCallback' in video) {
+      video.requestVideoFrameCallback(analyzeFrame);
+    } else {
+      rafId = requestAnimationFrame(analyzeFrame);
+    }
 
     if (video.readyState < 2) return;
 
-    // Draw small frame for analysis
+    // Tiny canvas = fast pixel read
     analysisCtx.drawImage(video, 0, 0, analysisCvs.width, analysisCvs.height);
     const px = analysisCtx.getImageData(0, 0, analysisCvs.width, analysisCvs.height).data;
 
-    // Average luminance — sample every 3rd pixel for speed
+    // Sample every 3rd pixel for speed
     let sum = 0, count = 0;
     for (let i = 0; i < px.length; i += 12) {
       sum += 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
@@ -579,24 +590,25 @@
     }
     const bright = sum / count; // 0–255
 
-    // Initialise rolling average on first frame
     if (rollingAvg < 0) { rollingAvg = bright; }
 
-    // Check for spike BEFORE updating average
-    const threshold = parseFloat(threshSlide.value) / 100;
-    const cooldownMs = parseFloat(coolSlide.value) * 1000;
-    const now = Date.now();
-    const spikeFactor = rollingAvg > 0 ? (bright - rollingAvg) / rollingAvg : 0;
+    const threshold   = parseFloat(threshSlide.value) / 100;
+    const cooldownMs  = parseFloat(coolSlide.value) * 1000;
+    const now         = Date.now();
+    const absDelta    = bright - rollingAvg;
+    const spikeFactor = rollingAvg > 0 ? absDelta / rollingAvg : 0;
 
-    if (spikeFactor >= threshold && (now - lastCaptureTime) > cooldownMs) {
+    // Show live numbers so you can see it's actually working
+    debugTxt.textContent = `avg:${rollingAvg.toFixed(0)} cur:${bright.toFixed(0)} spike:${(spikeFactor*100).toFixed(0)}%`;
+
+    // Require BOTH a % spike AND a minimum absolute jump to avoid false triggers
+    if (spikeFactor >= threshold && absDelta >= MIN_ABS_DELTA && (now - lastCaptureTime) > cooldownMs) {
       triggerCapture(bright, spikeFactor);
       lastCaptureTime = now;
     }
 
-    // Update rolling average slowly (so it adapts to ambient but not to the spike itself)
     rollingAvg = rollingAvg * (1 - SMOOTH) + bright * SMOOTH;
 
-    // Graph
     brightHistory.push(bright);
     if (brightHistory.length > HIST_LEN) brightHistory.shift();
     drawGraph(bright, rollingAvg * (1 + threshold));

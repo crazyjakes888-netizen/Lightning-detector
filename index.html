@@ -447,7 +447,10 @@
 <div id="lightbox">
   <button id="lightbox-close" title="Close">&times;</button>
   <img id="lightbox-img" src="" alt="Captured lightning" />
-  <a id="lightbox-dl" href="#" download="lightning.png">&#8595; Download</a>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+    <button id="lightbox-share" style="background:#4caf50;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:.9rem;font-weight:600;cursor:pointer">&#128190; Save to Photos</button>
+    <a id="lightbox-dl" href="#" download="lightning.png" style="background:var(--accent);color:#000;text-decoration:none;border-radius:8px;padding:9px 20px;font-weight:700;font-size:.9rem;display:flex;align-items:center">&#8595; Download</a>
+  </div>
 </div>
 
 <canvas id="capture-canvas" style="display:none"></canvas>
@@ -476,6 +479,7 @@
   const lightbox    = document.getElementById('lightbox');
   const lbImg       = document.getElementById('lightbox-img');
   const lbDl        = document.getElementById('lightbox-dl');
+  const lbShare     = document.getElementById('lightbox-share');
   const lbClose     = document.getElementById('lightbox-close');
 
   const analysisCtx = analysisCvs.getContext('2d', { willReadFrequently: true });
@@ -676,12 +680,12 @@
     wrap.appendChild(dl);
     galleryGrid.prepend(wrap);
 
-    // Lightbox on click
     wrap.addEventListener('click', (e) => {
       if (e.target === dl) return;
-      lbImg.src = dataUrl;
-      lbDl.href = dataUrl;
-      lbDl.download = filename;
+      lbImg.src      = dataUrl;
+      lbDl.href      = dataUrl;
+      lbDl.download  = filename;
+      lbShare._file  = { dataUrl, filename };
       lightbox.classList.add('open');
     });
   }
@@ -689,6 +693,25 @@
   /* ── Lightbox close ── */
   lbClose.addEventListener('click', () => lightbox.classList.remove('open'));
   lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.classList.remove('open'); });
+
+  lbShare.addEventListener('click', () => saveToPhotos(lbImg.src, lbDl.download));
+
+  async function saveToPhotos(dataUrl, filename) {
+    if (navigator.share) {
+      try {
+        const res  = await fetch(dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], filename || 'lightning.png', { type: 'image/png' });
+        await navigator.share({ files: [file], title: 'Lightning capture' });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return; // user cancelled share sheet
+      }
+    }
+    // Fallback: trigger download
+    const a = document.createElement('a');
+    a.href = dataUrl; a.download = filename || 'lightning.png'; a.click();
+  }
 
   /* ── Clear gallery ── */
   btnClear.addEventListener('click', () => {

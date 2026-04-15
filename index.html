@@ -244,14 +244,10 @@
       align-items: center; justify-content: center; flex-direction: column; gap: 14px;
     }
     #lightbox.open { display: flex; }
-    #lightbox img  { max-width: 90vw; max-height: 80vh; border-radius: 8px; border: 2px solid var(--border); }
+    #lightbox img  { max-width: 90vw; max-height: 75vh; border-radius: 8px; border: 2px solid var(--border); }
     #lightbox-close {
       position: absolute; top: 16px; right: 20px;
       font-size: 1.8rem; cursor: pointer; color: var(--muted); background: none; border: none; padding: 4px;
-    }
-    #lightbox-dl {
-      background: var(--accent); color: #000; text-decoration: none;
-      border-radius: 8px; padding: 8px 20px; font-weight: 700; font-size: .9rem;
     }
   </style>
 </head>
@@ -319,10 +315,14 @@
 
 </main>
 
+<!-- Lightbox -->
 <div id="lightbox">
   <button id="lightbox-close" title="Close">&times;</button>
   <img id="lightbox-img" src="" alt="Captured lightning" />
-  <a id="lightbox-dl" href="#" download="lightning.png">&#8595; Download</a>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+    <button id="lightbox-share" style="background:#4caf50;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:.9rem;font-weight:600;cursor:pointer">&#128190; Save to Photos</button>
+    <a id="lightbox-dl" href="#" download="lightning.png" style="background:var(--accent);color:#000;text-decoration:none;border-radius:8px;padding:9px 20px;font-weight:700;font-size:.9rem;display:flex;align-items:center">&#8595; Download</a>
+  </div>
 </div>
 
 <canvas id="capture-canvas" style="display:none"></canvas>
@@ -351,6 +351,7 @@
   const lightbox    = document.getElementById('lightbox');
   const lbImg       = document.getElementById('lightbox-img');
   const lbDl        = document.getElementById('lightbox-dl');
+  const lbShare     = document.getElementById('lightbox-share');
   const lbClose     = document.getElementById('lightbox-close');
 
   const analysisCtx = analysisCvs.getContext('2d', { willReadFrequently: true });
@@ -366,7 +367,30 @@
   const HIST_LEN      = 200;
   let rollingAvg      = -1;
   const SMOOTH        = 0.05;
-  const MIN_ABS_DELTA = 18; // minimum absolute brightness jump (0-255) to ignore camera noise
+  const MIN_ABS_DELTA = 18;
+
+  /* ── Persist photos in localStorage ── */
+  function savePhotosToStorage() {
+    try {
+      const data = photos.map(p => ({ dataUrl: p.dataUrl, ts: p.ts.toISOString() }));
+      localStorage.setItem('lightning_photos', JSON.stringify(data));
+    } catch (e) { /* storage full */ }
+  }
+
+  function loadPhotosFromStorage() {
+    try {
+      const raw = localStorage.getItem('lightning_photos');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      data.forEach(p => {
+        const entry = { dataUrl: p.dataUrl, ts: new Date(p.ts) };
+        photos.push(entry);
+        addThumb(entry);
+      });
+      captCount.textContent  = photos.length;
+      countBadge.textContent = photos.length;
+    } catch (e) { localStorage.removeItem('lightning_photos'); }
+  }
 
   function resizeGraph() {
     graphCvs.width  = graphCvs.offsetWidth;
@@ -429,30 +453,24 @@
     setStatus('Camera off');
   }
 
-  /* ── Analysis: fires on every real camera frame ── */
   function analyzeFrame() {
     if (!watching) return;
-
-    // requestVideoFrameCallback fires exactly when a new camera frame arrives
-    // — much faster/more accurate than requestAnimationFrame
     if ('requestVideoFrameCallback' in video) {
       video.requestVideoFrameCallback(analyzeFrame);
     } else {
       rafId = requestAnimationFrame(analyzeFrame);
     }
-
     if (video.readyState < 2) return;
 
     analysisCtx.drawImage(video, 0, 0, analysisCvs.width, analysisCvs.height);
     const px = analysisCtx.getImageData(0, 0, analysisCvs.width, analysisCvs.height).data;
 
-    // Sample every 3rd pixel for speed
     let sum = 0, count = 0;
     for (let i = 0; i < px.length; i += 12) {
       sum += 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
       count++;
     }
-    const bright = sum / count; // 0-255
+    const bright = sum / count;
 
     if (rollingAvg < 0) { rollingAvg = bright; }
 
@@ -462,17 +480,14 @@
     const absDelta    = bright - rollingAvg;
     const spikeFactor = rollingAvg > 0 ? absDelta / rollingAvg : 0;
 
-    // Live readout so you can verify it's actually scanning
     debugTxt.textContent = 'avg:' + rollingAvg.toFixed(0) + ' cur:' + bright.toFixed(0) + ' spike:' + (spikeFactor*100).toFixed(0) + '%';
 
-    // Require BOTH % spike AND minimum absolute jump — eliminates false triggers from camera noise
     if (spikeFactor >= threshold && absDelta >= MIN_ABS_DELTA && (now - lastCaptureTime) > cooldownMs) {
       triggerCapture(bright, spikeFactor);
       lastCaptureTime = now;
     }
 
     rollingAvg = rollingAvg * (1 - SMOOTH) + bright * SMOOTH;
-
     brightHistory.push(bright);
     if (brightHistory.length > HIST_LEN) brightHistory.shift();
     drawGraph(bright, rollingAvg * (1 + threshold));
@@ -482,7 +497,6 @@
     dot.className = 'indicator triggered';
     flashOvr.classList.add('flashing');
     setStatus('&#9889; Lightning detected! (+' + Math.round(factor*100) + '% spike)');
-
     setTimeout(() => {
       flashOvr.classList.remove('flashing');
       dot.className = 'indicator watching';
@@ -491,20 +505,20 @@
 
     const vw = video.videoWidth  || 1280;
     const vh = video.videoHeight || 720;
-    captCvs.width  = vw;
-    captCvs.height = vh;
+    captCvs.width  = vw; captCvs.height = vh;
     captCtx.save();
-    captCtx.translate(vw, 0);
-    captCtx.scale(-1, 1);
+    captCtx.translate(vw, 0); captCtx.scale(-1, 1);
     captCtx.drawImage(video, 0, 0, vw, vh);
     captCtx.restore();
 
     const dataUrl = captCvs.toDataURL('image/png');
     const ts = new Date();
-    photos.unshift({ dataUrl, ts });
-    addThumb(photos[0]);
+    const entry = { dataUrl, ts };
+    photos.unshift(entry);
+    addThumb(entry);
     captCount.textContent  = photos.length;
     countBadge.textContent = photos.length;
+    savePhotosToStorage();
   }
 
   function addThumb({ dataUrl, ts }) {
@@ -531,7 +545,10 @@
 
     wrap.addEventListener('click', (e) => {
       if (e.target === dl) return;
-      lbImg.src = dataUrl; lbDl.href = dataUrl; lbDl.download = filename;
+      lbImg.src     = dataUrl;
+      lbDl.href     = dataUrl;
+      lbDl.download = filename;
+      lbShare._cur  = { dataUrl, filename };
       lightbox.classList.add('open');
     });
   }
@@ -539,10 +556,33 @@
   lbClose.addEventListener('click', () => lightbox.classList.remove('open'));
   lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.classList.remove('open'); });
 
+  lbShare.addEventListener('click', () => {
+    const cur = lbShare._cur;
+    if (cur) saveToPhotos(cur.dataUrl, cur.filename);
+  });
+
+  async function saveToPhotos(dataUrl, filename) {
+    if (navigator.share) {
+      try {
+        const res  = await fetch(dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], filename || 'lightning.png', { type: 'image/png' });
+        await navigator.share({ files: [file], title: 'Lightning capture' });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+    // Fallback: download
+    const a = document.createElement('a');
+    a.href = dataUrl; a.download = filename || 'lightning.png'; a.click();
+  }
+
   btnClear.addEventListener('click', () => {
     photos = [];
     galleryGrid.innerHTML = '<p class="gallery-empty">No photos yet. Start watching and wait for lightning!</p>';
     captCount.textContent = '0'; countBadge.textContent = '0';
+    localStorage.removeItem('lightning_photos');
   });
 
   function drawGraph(current, triggerLine) {
@@ -550,13 +590,11 @@
     graphCtx.clearRect(0, 0, W, H);
     if (brightHistory.length < 2) return;
     const max = 255, xStep = W / (HIST_LEN - 1);
-
     const trigY = H - (triggerLine / max) * H;
     graphCtx.strokeStyle = 'rgba(245,197,24,0.35)';
     graphCtx.lineWidth = 1; graphCtx.setLineDash([4,4]);
     graphCtx.beginPath(); graphCtx.moveTo(0, trigY); graphCtx.lineTo(W, trigY); graphCtx.stroke();
     graphCtx.setLineDash([]);
-
     graphCtx.strokeStyle = '#4fc3f7'; graphCtx.lineWidth = 1.5;
     graphCtx.beginPath();
     brightHistory.forEach((v, i) => {
@@ -564,7 +602,6 @@
       i === 0 ? graphCtx.moveTo(x, y) : graphCtx.lineTo(x, y);
     });
     graphCtx.stroke();
-
     const lastX = (brightHistory.length - 1) * xStep;
     const lastY = H - (current / max) * H;
     graphCtx.fillStyle = '#4fc3f7';
@@ -578,6 +615,9 @@
 
   noCam.style.display = 'flex';
   video.style.display = 'none';
+
+  // Load saved photos on startup
+  loadPhotosFromStorage();
 
 })();
 </script>

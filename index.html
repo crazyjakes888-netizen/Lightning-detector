@@ -495,8 +495,8 @@
     noCam.style.display = 'none';
     video.style.display = 'block';
 
-    analysisCvs.width  = 160;
-    analysisCvs.height = 90;
+    analysisCvs.width  = 64;  // tiny canvas for maximum detection speed
+    analysisCvs.height = 36;
 
     watching        = true;
     rollingAvg      = -1;
@@ -530,11 +530,13 @@
     analysisCtx.drawImage(video, 0, 0, analysisCvs.width, analysisCvs.height);
     const px = analysisCtx.getImageData(0, 0, analysisCvs.width, analysisCvs.height).data;
 
-    let sum = 0;
-    for (let i = 0; i < px.length; i += 4) {
+    // Sample every 3rd pixel for speed
+    let sum = 0, count = 0;
+    for (let i = 0; i < px.length; i += 12) {
       sum += 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+      count++;
     }
-    const bright = sum / (analysisCvs.width * analysisCvs.height);
+    const bright = sum / count;
 
     if (rollingAvg < 0) { rollingAvg = bright; }
 

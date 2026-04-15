@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lightning Detector</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0c10;
+      --surface: #13161d;
+      --border: #1e2330;
+      --accent: #f5c518;
+      --accent2: #4fc3f7;
+      --danger: #ff5252;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --flash: #fffde7;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .bolt { font-size: 1.6rem; }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      color: var(--accent);
+    }
+
+    header p {
+      margin-left: auto;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    main {
+      width: 100%;
+      max-width: 960px;
+      padding: 20px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Camera card ── */
+    .camera-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #video-wrap {
+      position: relative;
+      width: 100%;
+      background: #000;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #camera-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1); /* mirror */
+    }
+
+    /* hidden canvas used for analysis */
+    #analysis-canvas { display: none; }
+
+    /* The visible capture flash canvas overlay */
+    #flash-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--flash);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 60ms ease-out;
+      border-radius: 0;
+    }
+    #flash-overlay.flashing { opacity: .85; }
+
+    .no-camera-msg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: .95rem;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .no-camera-msg span { font-size: 3rem; }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      font-size: .82rem;
+    }
+
+    .indicator {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .indicator.watching { background: #4caf50; box-shadow: 0 0 6px #4caf50; animation: pulse 1.4s infinite; }
+    .indicator.triggered { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+
+    #status-text { flex: 1; }
+    #capture-count { color: var(--accent); font-weight: 600; }
+
+    /* ── Controls card ── */
+    .controls-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 520px) {
+      .controls-card { grid-template-columns: 1fr; }
+    }
+
+    .control-group label {
+      display: block;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .control-group .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+      height: 4px;
+    }
+
+    .val-badge {
+      min-width: 38px;
+      text-align: right;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .btn-row {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: .9rem;
+      font-weight: 600;
+      transition: filter .15s, transform .1s;
+    }
+    button:active { transform: scale(.97); }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+
+    #btn-start {
+      background: #4caf50;
+      color: #fff;
+    }
+
+    #btn-stop {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    #btn-clear {
+      background: var(--border);
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    button:hover:not(:disabled) { filter: brightness(1.12); }
+
+    /* ── Graph ── */
+    .graph-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .graph-card h2 {
+      font-size: .8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+
+    #brightness-graph {
+      width: 100%;
+      height: 70px;
+      border-radius: 6px;
+      display: block;
+      background: #0d0f14;
+    }
+
+    /* ── Gallery ── */
+    .gallery-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+
+    .gallery-card h2 {
+      font-size: .9rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gallery-card h2 span {
+      background: var(--accent);
+      color: #000;
+      border-radius: 20px;
+      font-size: .72rem;
+      padding: 1px 8px;
+    }
+
+    #gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .gallery-empty {
+      color: var(--muted);
+      font-size: .9rem;
+      padding: 20px 0;
+      text-align: center;
+    }
+
+    .thumb-wrap {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      background: #000;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color .2s;
+    }
+    .thumb-wrap:hover { border-color: var(--accent); }
+
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .thumb-ts {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.7);
+      font-size: .68rem;
+      padding: 3px 6px;
+      color: #ccc;
+    }
+
+    .thumb-dl {
+      position: absolute;
+      top: 4px; right: 4px;
+      background: rgba(0,0,0,.65);
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: .7rem;
+      color: var(--accent2);
+      text-decoration: none;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .thumb-wrap:hover .thumb-dl { opacity: 1; }
+
+    /* ── Lightbox ── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.9);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox img {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+    }
+    #lightbox-close {
+      position: absolute;
+      top: 16px; right: 20px;
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: var(--muted);
+      background: none;
+      border: none;
+      padding: 4px;
+    }
+    #lightbox-dl {
+      background: var(--accent);
+      color: #000;
+      text-decoration: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-weight: 700;
+      font-size: .9rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="bolt">&#9889;</span>
+  <h1>Lightning Detector</h1>
+  <p>Auto-captures on brightness spike</p>
+</header>
+
+<main>
+
+  <!-- Camera -->
+  <div class="camera-card">
+    <div id="video-wrap">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <canvas id="analysis-canvas"></canvas>
+      <div id="flash-overlay"></div>
+      <div id="no-camera" class="no-camera-msg" style="display:none">
+        <span>&#128247;</span>
+        <p>Camera not started.<br>Press <strong>Start Watching</strong> below.</p>
+      </div>
+    </div>
+    <div class="status-bar">
+      <div class="indicator" id="dot"></div>
+      <span id="status-text">Camera off</span>
+      <span>Photos: <span id="capture-count">0</span></span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-card">
+
+    <div class="control-group">
+      <label>Sensitivity (brightness jump %)</label>
+      <div class="row">
+        <input type="range" id="threshold-slider" min="5" max="60" value="20" step="1" />
+        <span class="val-badge" id="threshold-val">20%</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Cooldown between captures (s)</label>
+      <div class="row">
+        <input type="range" id="cooldown-slider" min="1" max="10" value="2" step="1" />
+        <span class="val-badge" id="cooldown-val">2s</span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-start">&#9654; Start Watching</button>
+      <button id="btn-stop" disabled>&#9632; Stop</button>
+      <button id="btn-clear">Clear Photos</button>
+    </div>
+
+  </div>
+
+  <!-- Brightness graph -->
+  <div class="graph-card">
+    <h2>Live Brightness</h2>
+    <canvas id="brightness-graph"></canvas>
+  </div>
+
+  <!-- Gallery -->
+  <div class="gallery-card">
+    <h2>Captured Photos <span id="count-badge">0</span></h2>
+    <div id="gallery-grid">
+      <p class="gallery-empty">No photos yet. Start watching and wait for lightning!</p>
+    </div>
+  </div>
+
+</main>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close" title="Close">&times;</button>
+  <img id="lightbox-img" src="" alt="Captured lightning" />
+  <a id="lightbox-dl" href="#" download="lightning.png">&#8595; Download</a>
+</div>
+
+<canvas id="capture-canvas" style="display:none"></canvas>
+
+<script>
+(() => {
+  /* ── Elements ── */
+  const video       = document.getElementById('camera-video');
+  const analysisCvs = document.getElementById('analysis-canvas');
+  const captCvs     = document.getElementById('capture-canvas');
+  const flashOvr    = document.getElementById('flash-overlay');
+  const noCam       = document.getElementById('no-camera');
+  const dot         = document.getElementById('dot');
+  const statusTxt   = document.getElementById('status-text');
+  const captCount   = document.getElementById('capture-count');
+  const countBadge  = document.getElementById('count-badge');
+  const btnStart    = document.getElementById('btn-start');
+  const btnStop     = document.getElementById('btn-stop');
+  const btnClear    = document.getElementById('btn-clear');
+  const threshSlide = document.getElementById('threshold-slider');
+  const threshVal   = document.getElementById('threshold-val');
+  const coolSlide   = document.getElementById('cooldown-slider');
+  const coolVal     = document.getElementById('cooldown-val');
+  const galleryGrid = document.getElementById('gallery-grid');
+  const graphCvs    = document.getElementById('brightness-graph');
+  const lightbox    = document.getElementById('lightbox');
+  const lbImg       = document.getElementById('lightbox-img');
+  const lbDl        = document.getElementById('lightbox-dl');
+  const lbClose     = document.getElementById('lightbox-close');
+
+  const analysisCtx = analysisCvs.getContext('2d', { willReadFrequently: true });
+  const captCtx     = captCvs.getContext('2d');
+  const graphCtx    = graphCvs.getContext('2d');
+
+  /* ── State ── */
+  let stream          = null;
+  let watching        = false;
+  let rafId           = null;
+  let lastCaptureTime = 0;
+  let photos          = [];           // { dataUrl, ts }
+  let brightHistory   = [];           // rolling array for graph
+  const HIST_LEN      = 200;
+  let rollingAvg      = -1;           // initialised on first frame
+  const SMOOTH        = 0.06;         // EMA factor for rolling average
+
+  /* ── Graph setup ── */
+  function resizeGraph() {
+    graphCvs.width  = graphCvs.offsetWidth;
+    graphCvs.height = graphCvs.offsetHeight;
+  }
+  resizeGraph();
+  window.addEventListener('resize', resizeGraph);
+
+  /* ── Slider labels ── */
+  threshSlide.addEventListener('input', () => {
+    threshVal.textContent = threshSlide.value + '%';
+  });
+  coolSlide.addEventListener('input', () => {
+    coolVal.textContent = coolSlide.value + 's';
+  });
+
+  /* ── Start / Stop ── */
+  btnStart.addEventListener('click', startWatching);
+  btnStop.addEventListener('click',  stopWatching);
+
+  async function startWatching() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+    } catch (err) {
+      // fall back to any camera
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      } catch (err2) {
+        setStatus('Camera access denied: ' + err2.message, 'off');
+        return;
+      }
+    }
+
+    video.srcObject = stream;
+    await video.play();
+    noCam.style.display = 'none';
+    video.style.display = 'block';
+
+    analysisCvs.width  = 160;  // small for fast analysis
+    analysisCvs.height = 90;
+
+    watching        = true;
+    rollingAvg      = -1;
+    lastCaptureTime = 0;
+    brightHistory   = [];
+
+    btnStart.disabled = true;
+    btnStop.disabled  = false;
+    dot.className     = 'indicator watching';
+    setStatus('Watching for lightning…');
+
+    loop();
+  }
+
+  function stopWatching() {
+    watching = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    video.srcObject = null;
+    btnStart.disabled = false;
+    btnStop.disabled  = true;
+    dot.className     = 'indicator';
+    setStatus('Camera off');
+  }
+
+  /* ── Main analysis loop ── */
+  function loop() {
+    if (!watching) return;
+    rafId = requestAnimationFrame(loop);
+
+    if (video.readyState < 2) return;
+
+    // Draw small frame for analysis
+    analysisCtx.drawImage(video, 0, 0, analysisCvs.width, analysisCvs.height);
+    const px = analysisCtx.getImageData(0, 0, analysisCvs.width, analysisCvs.height).data;
+
+    // Average luminance (perceived brightness)
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      sum += 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+    }
+    const bright = sum / (analysisCvs.width * analysisCvs.height); // 0–255
+
+    // Initialise rolling average on first frame
+    if (rollingAvg < 0) { rollingAvg = bright; }
+
+    // Check for spike BEFORE updating average
+    const threshold = parseFloat(threshSlide.value) / 100;
+    const cooldownMs = parseFloat(coolSlide.value) * 1000;
+    const now = Date.now();
+    const spikeFactor = rollingAvg > 0 ? (bright - rollingAvg) / rollingAvg : 0;
+
+    if (spikeFactor >= threshold && (now - lastCaptureTime) > cooldownMs) {
+      triggerCapture(bright, spikeFactor);
+      lastCaptureTime = now;
+    }
+
+    // Update rolling average slowly (so it adapts to ambient but not to the spike itself)
+    rollingAvg = rollingAvg * (1 - SMOOTH) + bright * SMOOTH;
+
+    // Graph
+    brightHistory.push(bright);
+    if (brightHistory.length > HIST_LEN) brightHistory.shift();
+    drawGraph(bright, rollingAvg * (1 + threshold));
+  }
+
+  /* ── Capture ── */
+  function triggerCapture(bright, factor) {
+    // Flash UI
+    dot.className = 'indicator triggered';
+    flashOvr.classList.add('flashing');
+    setStatus(`&#9889; Lightning detected! (+${Math.round(factor*100)}% spike)`);
+
+    setTimeout(() => {
+      flashOvr.classList.remove('flashing');
+      dot.className = 'indicator watching';
+      setStatus('Watching for lightning…');
+    }, 400);
+
+    // Grab full-res frame from live video
+    const vw = video.videoWidth  || 1280;
+    const vh = video.videoHeight || 720;
+    captCvs.width  = vw;
+    captCvs.height = vh;
+    captCtx.save();
+    captCtx.translate(vw, 0);
+    captCtx.scale(-1, 1);   // mirror to match preview
+    captCtx.drawImage(video, 0, 0, vw, vh);
+    captCtx.restore();
+
+    const dataUrl = captCvs.toDataURL('image/png');
+    const ts = new Date();
+
+    photos.unshift({ dataUrl, ts });
+    addThumb(photos[0], photos.length - 1);
+    captCount.textContent = photos.length;
+    countBadge.textContent = photos.length;
+  }
+
+  /* ── Gallery thumb ── */
+  function addThumb({ dataUrl, ts }, idx) {
+    // Remove empty msg
+    const empty = galleryGrid.querySelector('.gallery-empty');
+    if (empty) empty.remove();
+
+    const wrap = document.createElement('div');
+    wrap.className = 'thumb-wrap';
+
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.alt = 'Lightning capture';
+
+    const label = document.createElement('div');
+    label.className = 'thumb-ts';
+    label.textContent = formatTime(ts);
+
+    const filename = `lightning_${ts.toISOString().replace(/[:.]/g,'-')}.png`;
+    const dl = document.createElement('a');
+    dl.className = 'thumb-dl';
+    dl.href = dataUrl;
+    dl.download = filename;
+    dl.textContent = '↓';
+
+    wrap.appendChild(img);
+    wrap.appendChild(label);
+    wrap.appendChild(dl);
+    galleryGrid.prepend(wrap);
+
+    // Lightbox on click
+    wrap.addEventListener('click', (e) => {
+      if (e.target === dl) return;
+      lbImg.src = dataUrl;
+      lbDl.href = dataUrl;
+      lbDl.download = filename;
+      lightbox.classList.add('open');
+    });
+  }
+
+  /* ── Lightbox close ── */
+  lbClose.addEventListener('click', () => lightbox.classList.remove('open'));
+  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.classList.remove('open'); });
+
+  /* ── Clear gallery ── */
+  btnClear.addEventListener('click', () => {
+    photos = [];
+    galleryGrid.innerHTML = '<p class="gallery-empty">No photos yet. Start watching and wait for lightning!</p>';
+    captCount.textContent = '0';
+    countBadge.textContent = '0';
+  });
+
+  /* ── Brightness Graph ── */
+  function drawGraph(current, triggerLine) {
+    const W = graphCvs.width;
+    const H = graphCvs.height;
+    graphCtx.clearRect(0, 0, W, H);
+
+    if (brightHistory.length < 2) return;
+
+    const max = 255;
+    const xStep = W / (HIST_LEN - 1);
+
+    // Trigger line
+    const trigY = H - (triggerLine / max) * H;
+    graphCtx.strokeStyle = 'rgba(245, 197, 24, 0.35)';
+    graphCtx.lineWidth = 1;
+    graphCtx.setLineDash([4, 4]);
+    graphCtx.beginPath();
+    graphCtx.moveTo(0, trigY);
+    graphCtx.lineTo(W, trigY);
+    graphCtx.stroke();
+    graphCtx.setLineDash([]);
+
+    // Brightness line
+    graphCtx.strokeStyle = '#4fc3f7';
+    graphCtx.lineWidth = 1.5;
+    graphCtx.beginPath();
+    brightHistory.forEach((v, i) => {
+      const x = i * xStep;
+      const y = H - (v / max) * H;
+      i === 0 ? graphCtx.moveTo(x, y) : graphCtx.lineTo(x, y);
+    });
+    graphCtx.stroke();
+
+    // Current dot
+    const lastX = (brightHistory.length - 1) * xStep;
+    const lastY = H - (current / max) * H;
+    graphCtx.fillStyle = '#4fc3f7';
+    graphCtx.beginPath();
+    graphCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+    graphCtx.fill();
+  }
+
+  /* ── Helpers ── */
+  function setStatus(msg) { statusTxt.innerHTML = msg; }
+
+  function formatTime(d) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  /* Show placeholder if no camera yet */
+  noCam.style.display = 'flex';
+  video.style.display = 'none';
+
+})();
+</script>
+</body>
+</html>

@@ -63,7 +63,6 @@
       gap: 20px;
     }
 
-    /* ── Camera card ── */
     .camera-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -99,7 +98,6 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 60ms ease-out;
-      border-radius: 0;
     }
     #flash-overlay.flashing { opacity: .85; }
 
@@ -113,7 +111,6 @@
       padding: 40px;
       text-align: center;
     }
-
     .no-camera-msg span { font-size: 3rem; }
 
     .status-bar {
@@ -131,15 +128,15 @@
       background: var(--muted);
       flex-shrink: 0;
     }
-    .indicator.watching { background: #4caf50; box-shadow: 0 0 6px #4caf50; animation: pulse 1.4s infinite; }
+    .indicator.watching  { background: #4caf50; box-shadow: 0 0 6px #4caf50; animation: pulse 1.4s infinite; }
     .indicator.triggered { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50% { opacity: .4; }
+      50%       { opacity: .4; }
     }
 
-    #status-text { flex: 1; }
+    #status-text  { flex: 1; }
     #capture-count { color: var(--accent); font-weight: 600; }
 
     .controls-card {
@@ -151,10 +148,7 @@
       grid-template-columns: 1fr 1fr;
       gap: 18px;
     }
-
-    @media (max-width: 520px) {
-      .controls-card { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 520px) { .controls-card { grid-template-columns: 1fr; } }
 
     .control-group label {
       display: block;
@@ -164,19 +158,9 @@
       text-transform: uppercase;
       letter-spacing: .06em;
     }
+    .control-group .row { display: flex; align-items: center; gap: 10px; }
 
-    .control-group .row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    input[type=range] {
-      flex: 1;
-      accent-color: var(--accent);
-      cursor: pointer;
-      height: 4px;
-    }
+    input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; height: 4px; }
 
     .val-badge {
       min-width: 38px;
@@ -186,29 +170,18 @@
       color: var(--accent);
     }
 
-    .btn-row {
-      grid-column: 1 / -1;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+    .btn-row { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
 
     button {
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      padding: 9px 20px;
-      font-size: .9rem;
-      font-weight: 600;
+      cursor: pointer; border: none; border-radius: 8px;
+      padding: 9px 20px; font-size: .9rem; font-weight: 600;
       transition: filter .15s, transform .1s;
     }
-    button:active { transform: scale(.97); }
+    button:active   { transform: scale(.97); }
     button:disabled { opacity: .4; cursor: not-allowed; }
-
     #btn-start { background: #4caf50; color: #fff; }
     #btn-stop  { background: var(--danger); color: #fff; }
     #btn-clear { background: var(--border); color: var(--muted); margin-left: auto; }
-
     button:hover:not(:disabled) { filter: brightness(1.12); }
 
     .graph-card {
@@ -217,21 +190,12 @@
       border-radius: 12px;
       padding: 14px 16px;
     }
-
     .graph-card h2 {
-      font-size: .8rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      margin-bottom: 8px;
+      font-size: .8rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;
     }
-
     #brightness-graph {
-      width: 100%;
-      height: 70px;
-      border-radius: 6px;
-      display: block;
-      background: #0d0f14;
+      width: 100%; height: 70px; border-radius: 6px; display: block; background: #0d0f14;
     }
 
     .gallery-card {
@@ -240,115 +204,54 @@
       border-radius: 12px;
       padding: 18px 20px;
     }
-
     .gallery-card h2 {
-      font-size: .9rem;
-      font-weight: 700;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-size: .9rem; font-weight: 700; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
     }
-
     .gallery-card h2 span {
-      background: var(--accent);
-      color: #000;
-      border-radius: 20px;
-      font-size: .72rem;
-      padding: 1px 8px;
+      background: var(--accent); color: #000;
+      border-radius: 20px; font-size: .72rem; padding: 1px 8px;
     }
-
     #gallery-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 10px;
     }
-
-    .gallery-empty {
-      color: var(--muted);
-      font-size: .9rem;
-      padding: 20px 0;
-      text-align: center;
-    }
+    .gallery-empty { color: var(--muted); font-size: .9rem; padding: 20px 0; text-align: center; }
 
     .thumb-wrap {
-      position: relative;
-      border-radius: 8px;
-      overflow: hidden;
-      aspect-ratio: 16/9;
-      background: #000;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: border-color .2s;
+      position: relative; border-radius: 8px; overflow: hidden;
+      aspect-ratio: 16/9; background: #000; cursor: pointer;
+      border: 2px solid transparent; transition: border-color .2s;
     }
     .thumb-wrap:hover { border-color: var(--accent); }
-
-    .thumb-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
+    .thumb-wrap img   { width: 100%; height: 100%; object-fit: cover; display: block; }
     .thumb-ts {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      background: rgba(0,0,0,.7);
-      font-size: .68rem;
-      padding: 3px 6px;
-      color: #ccc;
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.7); font-size: .68rem; padding: 3px 6px; color: #ccc;
     }
-
     .thumb-dl {
-      position: absolute;
-      top: 4px; right: 4px;
-      background: rgba(0,0,0,.65);
-      border-radius: 5px;
-      padding: 3px 6px;
-      font-size: .7rem;
-      color: var(--accent2);
-      text-decoration: none;
-      opacity: 0;
-      transition: opacity .2s;
+      position: absolute; top: 4px; right: 4px;
+      background: rgba(0,0,0,.65); border-radius: 5px;
+      padding: 3px 6px; font-size: .7rem; color: var(--accent2);
+      text-decoration: none; opacity: 0; transition: opacity .2s;
     }
     .thumb-wrap:hover .thumb-dl { opacity: 1; }
 
     #lightbox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.9);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 14px;
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.9); z-index: 1000;
+      align-items: center; justify-content: center; flex-direction: column; gap: 14px;
     }
     #lightbox.open { display: flex; }
-    #lightbox img {
-      max-width: 90vw;
-      max-height: 80vh;
-      border-radius: 8px;
-      border: 2px solid var(--border);
-    }
+    #lightbox img  { max-width: 90vw; max-height: 80vh; border-radius: 8px; border: 2px solid var(--border); }
     #lightbox-close {
-      position: absolute;
-      top: 16px; right: 20px;
-      font-size: 1.8rem;
-      cursor: pointer;
-      color: var(--muted);
-      background: none;
-      border: none;
-      padding: 4px;
+      position: absolute; top: 16px; right: 20px;
+      font-size: 1.8rem; cursor: pointer; color: var(--muted); background: none; border: none; padding: 4px;
     }
     #lightbox-dl {
-      background: var(--accent);
-      color: #000;
-      text-decoration: none;
-      border-radius: 8px;
-      padding: 8px 20px;
-      font-weight: 700;
-      font-size: .9rem;
+      background: var(--accent); color: #000; text-decoration: none;
+      border-radius: 8px; padding: 8px 20px; font-weight: 700; font-size: .9rem;
     }
   </style>
 </head>
@@ -375,6 +278,7 @@
     <div class="status-bar">
       <div class="indicator" id="dot"></div>
       <span id="status-text">Camera off</span>
+      <span id="debug-txt" style="font-size:.75rem;color:var(--muted);margin-left:auto;margin-right:8px"></span>
       <span>Photos: <span id="capture-count">0</span></span>
     </div>
   </div>
@@ -432,6 +336,7 @@
   const noCam       = document.getElementById('no-camera');
   const dot         = document.getElementById('dot');
   const statusTxt   = document.getElementById('status-text');
+  const debugTxt    = document.getElementById('debug-txt');
   const captCount   = document.getElementById('capture-count');
   const countBadge  = document.getElementById('count-badge');
   const btnStart    = document.getElementById('btn-start');
@@ -460,7 +365,8 @@
   let brightHistory   = [];
   const HIST_LEN      = 200;
   let rollingAvg      = -1;
-  const SMOOTH        = 0.06;
+  const SMOOTH        = 0.05;
+  const MIN_ABS_DELTA = 18; // minimum absolute brightness jump (0-255) to ignore camera noise
 
   function resizeGraph() {
     graphCvs.width  = graphCvs.offsetWidth;
@@ -495,7 +401,7 @@
     noCam.style.display = 'none';
     video.style.display = 'block';
 
-    analysisCvs.width  = 64;  // tiny canvas for maximum detection speed
+    analysisCvs.width  = 64;
     analysisCvs.height = 36;
 
     watching        = true;
@@ -508,7 +414,7 @@
     dot.className     = 'indicator watching';
     setStatus('Watching for lightning\u2026');
 
-    loop();
+    analyzeFrame();
   }
 
   function stopWatching() {
@@ -516,15 +422,25 @@
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     video.srcObject = null;
+    debugTxt.textContent = '';
     btnStart.disabled = false;
     btnStop.disabled  = true;
     dot.className     = 'indicator';
     setStatus('Camera off');
   }
 
-  function loop() {
+  /* ── Analysis: fires on every real camera frame ── */
+  function analyzeFrame() {
     if (!watching) return;
-    rafId = requestAnimationFrame(loop);
+
+    // requestVideoFrameCallback fires exactly when a new camera frame arrives
+    // — much faster/more accurate than requestAnimationFrame
+    if ('requestVideoFrameCallback' in video) {
+      video.requestVideoFrameCallback(analyzeFrame);
+    } else {
+      rafId = requestAnimationFrame(analyzeFrame);
+    }
+
     if (video.readyState < 2) return;
 
     analysisCtx.drawImage(video, 0, 0, analysisCvs.width, analysisCvs.height);
@@ -536,16 +452,21 @@
       sum += 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
       count++;
     }
-    const bright = sum / count;
+    const bright = sum / count; // 0-255
 
     if (rollingAvg < 0) { rollingAvg = bright; }
 
-    const threshold  = parseFloat(threshSlide.value) / 100;
-    const cooldownMs = parseFloat(coolSlide.value) * 1000;
-    const now        = Date.now();
-    const spikeFactor = rollingAvg > 0 ? (bright - rollingAvg) / rollingAvg : 0;
+    const threshold   = parseFloat(threshSlide.value) / 100;
+    const cooldownMs  = parseFloat(coolSlide.value) * 1000;
+    const now         = Date.now();
+    const absDelta    = bright - rollingAvg;
+    const spikeFactor = rollingAvg > 0 ? absDelta / rollingAvg : 0;
 
-    if (spikeFactor >= threshold && (now - lastCaptureTime) > cooldownMs) {
+    // Live readout so you can verify it's actually scanning
+    debugTxt.textContent = 'avg:' + rollingAvg.toFixed(0) + ' cur:' + bright.toFixed(0) + ' spike:' + (spikeFactor*100).toFixed(0) + '%';
+
+    // Require BOTH % spike AND minimum absolute jump — eliminates false triggers from camera noise
+    if (spikeFactor >= threshold && absDelta >= MIN_ABS_DELTA && (now - lastCaptureTime) > cooldownMs) {
       triggerCapture(bright, spikeFactor);
       lastCaptureTime = now;
     }
@@ -580,7 +501,6 @@
 
     const dataUrl = captCvs.toDataURL('image/png');
     const ts = new Date();
-
     photos.unshift({ dataUrl, ts });
     addThumb(photos[0]);
     captCount.textContent  = photos.length;
@@ -595,8 +515,7 @@
     wrap.className = 'thumb-wrap';
 
     const img = document.createElement('img');
-    img.src = dataUrl;
-    img.alt = 'Lightning capture';
+    img.src = dataUrl; img.alt = 'Lightning capture';
 
     const label = document.createElement('div');
     label.className = 'thumb-ts';
@@ -604,21 +523,15 @@
 
     const filename = 'lightning_' + ts.toISOString().replace(/[:.]/g,'-') + '.png';
     const dl = document.createElement('a');
-    dl.className = 'thumb-dl';
-    dl.href = dataUrl;
-    dl.download = filename;
-    dl.textContent = '\u2193';
+    dl.className = 'thumb-dl'; dl.href = dataUrl;
+    dl.download = filename; dl.textContent = '\u2193';
 
-    wrap.appendChild(img);
-    wrap.appendChild(label);
-    wrap.appendChild(dl);
+    wrap.appendChild(img); wrap.appendChild(label); wrap.appendChild(dl);
     galleryGrid.prepend(wrap);
 
     wrap.addEventListener('click', (e) => {
       if (e.target === dl) return;
-      lbImg.src    = dataUrl;
-      lbDl.href    = dataUrl;
-      lbDl.download = filename;
+      lbImg.src = dataUrl; lbDl.href = dataUrl; lbDl.download = filename;
       lightbox.classList.add('open');
     });
   }
@@ -629,35 +542,25 @@
   btnClear.addEventListener('click', () => {
     photos = [];
     galleryGrid.innerHTML = '<p class="gallery-empty">No photos yet. Start watching and wait for lightning!</p>';
-    captCount.textContent  = '0';
-    countBadge.textContent = '0';
+    captCount.textContent = '0'; countBadge.textContent = '0';
   });
 
   function drawGraph(current, triggerLine) {
-    const W = graphCvs.width;
-    const H = graphCvs.height;
+    const W = graphCvs.width, H = graphCvs.height;
     graphCtx.clearRect(0, 0, W, H);
     if (brightHistory.length < 2) return;
-
-    const max   = 255;
-    const xStep = W / (HIST_LEN - 1);
+    const max = 255, xStep = W / (HIST_LEN - 1);
 
     const trigY = H - (triggerLine / max) * H;
-    graphCtx.strokeStyle = 'rgba(245, 197, 24, 0.35)';
-    graphCtx.lineWidth = 1;
-    graphCtx.setLineDash([4, 4]);
-    graphCtx.beginPath();
-    graphCtx.moveTo(0, trigY);
-    graphCtx.lineTo(W, trigY);
-    graphCtx.stroke();
+    graphCtx.strokeStyle = 'rgba(245,197,24,0.35)';
+    graphCtx.lineWidth = 1; graphCtx.setLineDash([4,4]);
+    graphCtx.beginPath(); graphCtx.moveTo(0, trigY); graphCtx.lineTo(W, trigY); graphCtx.stroke();
     graphCtx.setLineDash([]);
 
-    graphCtx.strokeStyle = '#4fc3f7';
-    graphCtx.lineWidth = 1.5;
+    graphCtx.strokeStyle = '#4fc3f7'; graphCtx.lineWidth = 1.5;
     graphCtx.beginPath();
     brightHistory.forEach((v, i) => {
-      const x = i * xStep;
-      const y = H - (v / max) * H;
+      const x = i * xStep, y = H - (v / max) * H;
       i === 0 ? graphCtx.moveTo(x, y) : graphCtx.lineTo(x, y);
     });
     graphCtx.stroke();
@@ -665,9 +568,7 @@
     const lastX = (brightHistory.length - 1) * xStep;
     const lastY = H - (current / max) * H;
     graphCtx.fillStyle = '#4fc3f7';
-    graphCtx.beginPath();
-    graphCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
-    graphCtx.fill();
+    graphCtx.beginPath(); graphCtx.arc(lastX, lastY, 3, 0, Math.PI*2); graphCtx.fill();
   }
 
   function setStatus(msg) { statusTxt.innerHTML = msg; }

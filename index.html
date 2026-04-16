@@ -639,7 +639,10 @@
 
     <!-- Camera / Stream panel -->
     <div class="remote-panel" id="panel-cam">
-      <p class="remote-hint">Enter the code shown on the receiving device:</p>
+      <p class="remote-hint">
+        Start Watching on your iPad first if you want it to detect too,
+        then enter the code shown on the PC:
+      </p>
       <input class="remote-code-input" id="cam-code-input" maxlength="6" placeholder="XXXXXX" />
       <button class="btn-stream" id="btn-cam-stream">Start Streaming</button>
       <div class="remote-status-line" id="cam-status"></div>
@@ -1161,14 +1164,20 @@
 
     camStatusEl.textContent = 'Starting camera…';
     let camStream;
-    try {
-      camStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
-        audio: false
-      });
-    } catch (e) {
-      camStatusEl.textContent = 'Camera permission denied.';
-      return;
+    // Reuse the existing local camera stream if already watching on this device
+    // so the iPad can detect lightning AND stream to PC simultaneously.
+    if (stream) {
+      camStream = stream;
+    } else {
+      try {
+        camStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
+          audio: false
+        });
+      } catch (e) {
+        camStatusEl.textContent = 'Camera permission denied.';
+        return;
+      }
     }
 
     camStatusEl.textContent = 'Connecting to PC…';

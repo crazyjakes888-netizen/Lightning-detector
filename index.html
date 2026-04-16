@@ -499,6 +499,15 @@
   const SMOOTH        = 0.05;
   const MIN_ABS_DELTA = 18; // absolute brightness jump required (0-255) to filter camera noise
 
+  /* ── Burst-capture state ── */
+  let burstMode       = false;  // true while recording the 1-second flash window
+  let burstEndTime    = 0;      // performance.now() deadline for the burst
+  let burstFrameCount = 0;      // frames analysed in current burst (debug)
+  let burstSaved      = 0;      // flash frames saved in current burst
+  let burstBaseAvg    = 0;      // rollingAvg frozen at the moment of detection
+  const BURST_DURATION_MS = 1000; // 1-second window
+  const MAX_BURST_SAVES   = 5;    // cap: save at most 5 frames per burst
+
   /* ── Graph setup ── */
   function resizeGraph() {
     graphCvs.width  = graphCvs.offsetWidth;
@@ -547,6 +556,9 @@
     rollingAvg      = -1;
     lastCaptureTime = 0;
     brightHistory   = [];
+    burstMode       = false;
+    burstSaved      = 0;
+    burstFrameCount = 0;
 
     btnStart.disabled = true;
     btnStop.disabled  = false;
@@ -582,7 +594,7 @@
 
     if (video.readyState < 2) return;
 
-    // Tiny canvas = fast pixel read
+    // Tiny canvas = fast pixel read (same path used by both normal detection & burst)
     analysisCtx.drawImage(video, 0, 0, analysisCvs.width, analysisCvs.height);
     const px = analysisCtx.getImageData(0, 0, analysisCvs.width, analysisCvs.height).data;
 
@@ -594,6 +606,45 @@
     }
     const bright = sum / count; // 0–255
 
+    // ── Burst window: analyse each of the ~60 frames in the 1-second window ──
+    if (burstMode) {
+      const threshold = parseFloat(threshSlide.value) / 100;
+      // A frame qualifies as a "flash frame" when it is still well above the
+      // pre-flash baseline — use 40% of the user's sensitivity threshold so we
+      // catch the entire bolt without saving the dim tail frames.
+      const flashMin = Math.max(
+        burstBaseAvg + MIN_ABS_DELTA,
+        burstBaseAvg * (1 + threshold * 0.4)
+      );
+
+      if (bright >= flashMin && burstSaved < MAX_BURST_SAVES) {
+        saveBurstFrame();
+        burstSaved++;
+      }
+
+      burstFrameCount++;
+      brightHistory.push(bright);
+      if (brightHistory.length > HIST_LEN) brightHistory.shift();
+      drawGraph(bright, burstBaseAvg * (1 + threshold));
+      debugTxt.textContent =
+        `BURST ${burstFrameCount}fr | bright:${bright.toFixed(0)} | saved:${burstSaved}`;
+
+      if (performance.now() >= burstEndTime) {
+        burstMode = false;
+        const saved = burstSaved;
+        burstSaved = 0;
+        if (saved > 0) {
+          setStatus(`&#9889; Saved ${saved} flash frame${saved > 1 ? 's' : ''} — watching…`);
+          setTimeout(() => { if (!burstMode) setStatus('Watching for lightning…'); }, 3000);
+        } else {
+          setStatus('Burst complete — no flash frames found. Watching…');
+          setTimeout(() => { if (!burstMode) setStatus('Watching for lightning…'); }, 3000);
+        }
+      }
+      return;
+    }
+
+    // ── Normal detection ──
     if (rollingAvg < 0) { rollingAvg = bright; }
 
     const threshold   = parseFloat(threshSlide.value) / 100;
@@ -618,20 +669,33 @@
     drawGraph(bright, rollingAvg * (1 + threshold));
   }
 
-  /* ── Capture ── */
+  /* ── Trigger: kick off a 1-second burst capture window ── */
   function triggerCapture(bright, factor) {
-    // Flash UI
+    // Flash UI feedback
     dot.className = 'indicator triggered';
     flashOvr.classList.add('flashing');
-    setStatus(`&#9889; Lightning detected! (+${Math.round(factor*100)}% spike)`);
-
+    setStatus(`&#9889; Lightning detected! Analysing 1-second burst at 60 fps…`);
     setTimeout(() => {
       flashOvr.classList.remove('flashing');
       dot.className = 'indicator watching';
-      setStatus('Watching for lightning…');
     }, 400);
 
-    // Grab full-res frame from live video
+    // Freeze the pre-flash baseline so we can identify bright frames inside the burst
+    burstBaseAvg    = rollingAvg;
+    burstMode       = true;
+    burstEndTime    = performance.now() + BURST_DURATION_MS;
+    burstFrameCount = 0;
+    burstSaved      = 0;
+
+    // The current frame IS the trigger frame — save it immediately (it is the
+    // peak-brightness frame that fired detection).
+    saveBurstFrame();
+    burstSaved++;
+    burstFrameCount++;
+  }
+
+  /* ── Save one full-resolution flash frame to the gallery ── */
+  function saveBurstFrame() {
     const vw = video.videoWidth  || 1280;
     const vh = video.videoHeight || 720;
     captCvs.width  = vw;
@@ -646,8 +710,8 @@
     const ts = new Date();
 
     photos.unshift({ dataUrl, ts });
-    addThumb(photos[0], photos.length - 1);
-    captCount.textContent = photos.length;
+    addThumb(photos[0]);
+    captCount.textContent  = photos.length;
     countBadge.textContent = photos.length;
   }
 

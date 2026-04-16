@@ -331,6 +331,111 @@
     }
     .thumb-wrap:hover .thumb-dl { opacity: 1; }
 
+    /* ── Analytics modal ── */
+    #analytics-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.88);
+      z-index: 1000;
+      align-items: flex-start;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+    #analytics-modal.open { display: flex; }
+
+    .analytics-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px 26px;
+      width: 100%;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .analytics-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .analytics-header h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    #analytics-close {
+      background: none;
+      border: none;
+      font-size: 1.6rem;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    #analytics-close:hover { color: var(--text); }
+
+    .analytics-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: .68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .analytics-graph-label {
+      font-size: .75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+
+    #session-graph {
+      width: 100%;
+      height: 160px;
+      border-radius: 8px;
+      background: #0d0f14;
+      display: block;
+    }
+
+    .analytics-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+
+    .analytics-legend span { display: flex; align-items: center; gap: 5px; }
+    .analytics-legend .dot-blue  { width:10px;height:3px;background:#4fc3f7;border-radius:2px; }
+    .analytics-legend .dot-gold  { width:10px;height:10px;background:rgba(245,197,24,.7);border-radius:2px; }
+
     /* ── Lightbox ── */
     #lightbox {
       display: none;
@@ -422,6 +527,7 @@
     <div class="btn-row">
       <button id="btn-start">&#9654; Start Watching</button>
       <button id="btn-stop" disabled>&#9632; Stop</button>
+      <button id="btn-analytics">&#128200; Analytics</button>
       <button id="btn-clear">Clear Photos</button>
     </div>
 
@@ -442,6 +548,40 @@
   </div>
 
 </main>
+
+<!-- Analytics Modal -->
+<div id="analytics-modal">
+  <div class="analytics-inner">
+    <div class="analytics-header">
+      <h2>&#128200; Session Analytics</h2>
+      <button id="analytics-close" title="Close">&times;</button>
+    </div>
+    <div class="analytics-stats">
+      <div class="stat-box">
+        <div class="stat-label">Time on Page</div>
+        <div class="stat-value" id="analytics-timer">00:00:00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Captures</div>
+        <div class="stat-value" id="analytics-captures">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Avg Brightness</div>
+        <div class="stat-value" id="analytics-avg">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Peak Brightness</div>
+        <div class="stat-value" id="analytics-peak">—</div>
+      </div>
+    </div>
+    <div class="analytics-graph-label">Brightness — full session (1 sample/sec)</div>
+    <canvas id="session-graph"></canvas>
+    <div class="analytics-legend">
+      <span><span class="dot-blue"></span> Brightness</span>
+      <span><span class="dot-gold"></span> Lightning capture</span>
+    </div>
+  </div>
+</div>
 
 <!-- Lightbox -->
 <div id="lightbox">
@@ -498,6 +638,12 @@
   let rollingAvg      = -1;
   const SMOOTH        = 0.05;
   const MIN_ABS_DELTA = 18; // absolute brightness jump required (0-255) to filter camera noise
+
+  /* ── Session analytics state ── */
+  const sessionStart      = Date.now();
+  let   sessionHistory    = [];   // { t: seconds_since_load, b: brightness } — 1 per second
+  let   sessionCaptures   = [];   // seconds_since_load timestamps for each saved frame
+  let   lastSessionSample = 0;    // Date.now() of last session-history sample
 
   /* ── Burst-capture state ── */
   let burstMode       = false;  // true while recording the 1-second flash window
@@ -605,6 +751,13 @@
       count++;
     }
     const bright = sum / count; // 0–255
+
+    // ── Session history: one sample per second (used by Analytics) ──
+    const nowMs = Date.now();
+    if (nowMs - lastSessionSample >= 1000) {
+      sessionHistory.push({ t: (nowMs - sessionStart) / 1000, b: bright });
+      lastSessionSample = nowMs;
+    }
 
     // ── Burst window: analyse each of the ~60 frames in the 1-second window ──
     if (burstMode) {
@@ -717,6 +870,7 @@
     const dataUrl = captCvs.toDataURL('image/png');
     const ts = new Date();
 
+    sessionCaptures.push((Date.now() - sessionStart) / 1000);
     photos.unshift({ dataUrl, ts });
     addThumb(photos[0]);
     captCount.textContent  = photos.length;
@@ -833,6 +987,142 @@
     graphCtx.beginPath();
     graphCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
     graphCtx.fill();
+  }
+
+  /* ── Analytics ── */
+  const btnAnalytics     = document.getElementById('btn-analytics');
+  const analyticsModal   = document.getElementById('analytics-modal');
+  const analyticsClose   = document.getElementById('analytics-close');
+  const sessionGraphCvs  = document.getElementById('session-graph');
+  const sessionGraphCtx  = sessionGraphCvs.getContext('2d');
+  const analyticsTimerEl = document.getElementById('analytics-timer');
+  const analyticsCapEl   = document.getElementById('analytics-captures');
+  const analyticsAvgEl   = document.getElementById('analytics-avg');
+  const analyticsPeakEl  = document.getElementById('analytics-peak');
+  let   analyticsInterval = null;
+
+  btnAnalytics.addEventListener('click', () => {
+    analyticsModal.classList.add('open');
+    renderAnalytics();
+    analyticsInterval = setInterval(renderAnalytics, 1000);
+  });
+
+  function closeAnalytics() {
+    analyticsModal.classList.remove('open');
+    clearInterval(analyticsInterval);
+    analyticsInterval = null;
+  }
+
+  analyticsClose.addEventListener('click', closeAnalytics);
+  analyticsModal.addEventListener('click', (e) => { if (e.target === analyticsModal) closeAnalytics(); });
+
+  function renderAnalytics() {
+    // Session timer
+    const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+    const h = Math.floor(elapsed / 3600);
+    const m = Math.floor((elapsed % 3600) / 60);
+    const s = elapsed % 60;
+    analyticsTimerEl.textContent =
+      `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+    // Stats
+    analyticsCapEl.textContent = photos.length;
+    if (sessionHistory.length > 0) {
+      const vals = sessionHistory.map(p => p.b);
+      const avg  = vals.reduce((a,b) => a+b, 0) / vals.length;
+      analyticsAvgEl.textContent  = avg.toFixed(0);
+      analyticsPeakEl.textContent = Math.max(...vals).toFixed(0);
+    }
+
+    drawSessionGraph();
+  }
+
+  function drawSessionGraph() {
+    const W = sessionGraphCvs.offsetWidth;
+    const H = sessionGraphCvs.offsetHeight;
+    if (!W || !H) return;
+    sessionGraphCvs.width  = W;
+    sessionGraphCvs.height = H;
+    sessionGraphCtx.clearRect(0, 0, W, H);
+
+    if (sessionHistory.length < 2) {
+      sessionGraphCtx.fillStyle = '#4b5563';
+      sessionGraphCtx.font = '13px system-ui, sans-serif';
+      sessionGraphCtx.textAlign = 'center';
+      sessionGraphCtx.fillText('No data yet — start watching!', W / 2, H / 2);
+      return;
+    }
+
+    const totalSecs = Math.max(1, (Date.now() - sessionStart) / 1000);
+    const pad = { t: 8, r: 8, b: 28, l: 32 };
+    const gW  = W - pad.l - pad.r;
+    const gH  = H - pad.t - pad.b;
+
+    const toX = t => pad.l + (t / totalSecs) * gW;
+    const toY = b => pad.t + gH - (b / 255) * gH;
+
+    // Subtle horizontal grid + Y labels
+    sessionGraphCtx.font = '9px system-ui, sans-serif';
+    sessionGraphCtx.textAlign = 'right';
+    [0, 85, 170, 255].forEach(v => {
+      const y = toY(v);
+      sessionGraphCtx.fillStyle = '#4b5563';
+      sessionGraphCtx.fillText(v, pad.l - 4, y + 3);
+      sessionGraphCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+      sessionGraphCtx.lineWidth = 1;
+      sessionGraphCtx.setLineDash([]);
+      sessionGraphCtx.beginPath();
+      sessionGraphCtx.moveTo(pad.l, y);
+      sessionGraphCtx.lineTo(pad.l + gW, y);
+      sessionGraphCtx.stroke();
+    });
+
+    // X-axis time labels
+    sessionGraphCtx.textAlign = 'center';
+    sessionGraphCtx.fillStyle = '#4b5563';
+    const labelStep = totalSecs <= 120  ? 30
+                    : totalSecs <= 600  ? 60
+                    : totalSecs <= 3600 ? 300 : 600;
+    for (let t = 0; t <= totalSecs; t += labelStep) {
+      const x    = toX(t);
+      const mins = Math.floor(t / 60);
+      const secs = Math.floor(t % 60);
+      const lbl  = mins > 0 ? `${mins}m${secs ? secs+'s' : ''}` : `${secs}s`;
+      sessionGraphCtx.fillText(lbl, x, H - 6);
+    }
+
+    // Capture event markers — vertical gold lines
+    sessionCaptures.forEach(t => {
+      const x = toX(t);
+      sessionGraphCtx.strokeStyle = 'rgba(245,197,24,0.65)';
+      sessionGraphCtx.lineWidth = 1.5;
+      sessionGraphCtx.setLineDash([]);
+      sessionGraphCtx.beginPath();
+      sessionGraphCtx.moveTo(x, pad.t);
+      sessionGraphCtx.lineTo(x, pad.t + gH);
+      sessionGraphCtx.stroke();
+    });
+
+    // Fill under brightness line
+    sessionGraphCtx.beginPath();
+    sessionGraphCtx.moveTo(toX(sessionHistory[0].t), pad.t + gH);
+    sessionHistory.forEach(p => sessionGraphCtx.lineTo(toX(p.t), toY(p.b)));
+    sessionGraphCtx.lineTo(toX(sessionHistory[sessionHistory.length - 1].t), pad.t + gH);
+    sessionGraphCtx.closePath();
+    sessionGraphCtx.fillStyle = 'rgba(79,195,247,0.08)';
+    sessionGraphCtx.fill();
+
+    // Brightness line
+    sessionGraphCtx.strokeStyle = '#4fc3f7';
+    sessionGraphCtx.lineWidth = 1.5;
+    sessionGraphCtx.setLineDash([]);
+    sessionGraphCtx.beginPath();
+    sessionHistory.forEach((p, i) => {
+      const x = toX(p.t);
+      const y = toY(p.b);
+      i === 0 ? sessionGraphCtx.moveTo(x, y) : sessionGraphCtx.lineTo(x, y);
+    });
+    sessionGraphCtx.stroke();
   }
 
   /* ── Helpers ── */

@@ -63,6 +63,7 @@
       gap: 20px;
     }
 
+    /* ── Camera card ── */
     .camera-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -86,11 +87,13 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      transform: scaleX(-1);
+      transform: scaleX(-1); /* mirror */
     }
 
+    /* hidden canvas used for analysis */
     #analysis-canvas { display: none; }
 
+    /* The visible capture flash canvas overlay */
     #flash-overlay {
       position: absolute;
       inset: 0;
@@ -98,6 +101,7 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 60ms ease-out;
+      border-radius: 0;
     }
     #flash-overlay.flashing { opacity: .85; }
 
@@ -111,8 +115,10 @@
       padding: 40px;
       text-align: center;
     }
+
     .no-camera-msg span { font-size: 3rem; }
 
+    /* Status bar */
     .status-bar {
       display: flex;
       align-items: center;
@@ -128,17 +134,18 @@
       background: var(--muted);
       flex-shrink: 0;
     }
-    .indicator.watching  { background: #4caf50; box-shadow: 0 0 6px #4caf50; animation: pulse 1.4s infinite; }
+    .indicator.watching { background: #4caf50; box-shadow: 0 0 6px #4caf50; animation: pulse 1.4s infinite; }
     .indicator.triggered { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50%       { opacity: .4; }
+      50% { opacity: .4; }
     }
 
-    #status-text  { flex: 1; }
+    #status-text { flex: 1; }
     #capture-count { color: var(--accent); font-weight: 600; }
 
+    /* ── Controls card ── */
     .controls-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -148,7 +155,10 @@
       grid-template-columns: 1fr 1fr;
       gap: 18px;
     }
-    @media (max-width: 520px) { .controls-card { grid-template-columns: 1fr; } }
+
+    @media (max-width: 520px) {
+      .controls-card { grid-template-columns: 1fr; }
+    }
 
     .control-group label {
       display: block;
@@ -158,9 +168,19 @@
       text-transform: uppercase;
       letter-spacing: .06em;
     }
-    .control-group .row { display: flex; align-items: center; gap: 10px; }
 
-    input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; height: 4px; }
+    .control-group .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+      height: 4px;
+    }
 
     .val-badge {
       min-width: 38px;
@@ -170,84 +190,184 @@
       color: var(--accent);
     }
 
-    .btn-row { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-row {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
     button {
-      cursor: pointer; border: none; border-radius: 8px;
-      padding: 9px 20px; font-size: .9rem; font-weight: 600;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: .9rem;
+      font-weight: 600;
       transition: filter .15s, transform .1s;
     }
-    button:active   { transform: scale(.97); }
+    button:active { transform: scale(.97); }
     button:disabled { opacity: .4; cursor: not-allowed; }
-    #btn-start { background: #4caf50; color: #fff; }
-    #btn-stop  { background: var(--danger); color: #fff; }
-    #btn-clear { background: var(--border); color: var(--muted); margin-left: auto; }
+
+    #btn-start {
+      background: #4caf50;
+      color: #fff;
+    }
+
+    #btn-stop {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    #btn-clear {
+      background: var(--border);
+      color: var(--muted);
+      margin-left: auto;
+    }
+
     button:hover:not(:disabled) { filter: brightness(1.12); }
 
+    /* ── Graph ── */
     .graph-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 14px 16px;
     }
+
     .graph-card h2 {
-      font-size: .8rem; color: var(--muted);
-      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;
-    }
-    #brightness-graph {
-      width: 100%; height: 70px; border-radius: 6px; display: block; background: #0d0f14;
+      font-size: .8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 8px;
     }
 
+    #brightness-graph {
+      width: 100%;
+      height: 70px;
+      border-radius: 6px;
+      display: block;
+      background: #0d0f14;
+    }
+
+    /* ── Gallery ── */
     .gallery-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 18px 20px;
     }
+
     .gallery-card h2 {
-      font-size: .9rem; font-weight: 700; margin-bottom: 14px;
-      display: flex; align-items: center; gap: 8px;
+      font-size: .9rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+
     .gallery-card h2 span {
-      background: var(--accent); color: #000;
-      border-radius: 20px; font-size: .72rem; padding: 1px 8px;
+      background: var(--accent);
+      color: #000;
+      border-radius: 20px;
+      font-size: .72rem;
+      padding: 1px 8px;
     }
+
     #gallery-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 10px;
     }
-    .gallery-empty { color: var(--muted); font-size: .9rem; padding: 20px 0; text-align: center; }
+
+    .gallery-empty {
+      color: var(--muted);
+      font-size: .9rem;
+      padding: 20px 0;
+      text-align: center;
+    }
 
     .thumb-wrap {
-      position: relative; border-radius: 8px; overflow: hidden;
-      aspect-ratio: 16/9; background: #000; cursor: pointer;
-      border: 2px solid transparent; transition: border-color .2s;
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      background: #000;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color .2s;
     }
     .thumb-wrap:hover { border-color: var(--accent); }
-    .thumb-wrap img   { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .thumb-ts {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      background: rgba(0,0,0,.7); font-size: .68rem; padding: 3px 6px; color: #ccc;
+
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
+
+    .thumb-ts {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.7);
+      font-size: .68rem;
+      padding: 3px 6px;
+      color: #ccc;
+    }
+
     .thumb-dl {
-      position: absolute; top: 4px; right: 4px;
-      background: rgba(0,0,0,.65); border-radius: 5px;
-      padding: 3px 6px; font-size: .7rem; color: var(--accent2);
-      text-decoration: none; opacity: 0; transition: opacity .2s;
+      position: absolute;
+      top: 4px; right: 4px;
+      background: rgba(0,0,0,.65);
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: .7rem;
+      color: var(--accent2);
+      text-decoration: none;
+      opacity: 0;
+      transition: opacity .2s;
     }
     .thumb-wrap:hover .thumb-dl { opacity: 1; }
 
+    /* ── Lightbox ── */
     #lightbox {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.9); z-index: 1000;
-      align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.9);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
     }
     #lightbox.open { display: flex; }
-    #lightbox img  { max-width: 90vw; max-height: 75vh; border-radius: 8px; border: 2px solid var(--border); }
+    #lightbox img {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+    }
     #lightbox-close {
-      position: absolute; top: 16px; right: 20px;
-      font-size: 1.8rem; cursor: pointer; color: var(--muted); background: none; border: none; padding: 4px;
+      position: absolute;
+      top: 16px; right: 20px;
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: var(--muted);
+      background: none;
+      border: none;
+      padding: 4px;
+    }
+    #lightbox-dl {
+      background: var(--accent);
+      color: #000;
+      text-decoration: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-weight: 700;
+      font-size: .9rem;
     }
   </style>
 </head>
@@ -261,6 +381,7 @@
 
 <main>
 
+  <!-- Camera -->
   <div class="camera-card">
     <div id="video-wrap">
       <video id="camera-video" autoplay playsinline muted></video>
@@ -279,7 +400,9 @@
     </div>
   </div>
 
+  <!-- Controls -->
   <div class="controls-card">
+
     <div class="control-group">
       <label>Sensitivity (brightness jump %)</label>
       <div class="row">
@@ -287,6 +410,7 @@
         <span class="val-badge" id="threshold-val">20%</span>
       </div>
     </div>
+
     <div class="control-group">
       <label>Cooldown between captures (s)</label>
       <div class="row">
@@ -294,18 +418,22 @@
         <span class="val-badge" id="cooldown-val">2s</span>
       </div>
     </div>
+
     <div class="btn-row">
       <button id="btn-start">&#9654; Start Watching</button>
       <button id="btn-stop" disabled>&#9632; Stop</button>
       <button id="btn-clear">Clear Photos</button>
     </div>
+
   </div>
 
+  <!-- Brightness graph -->
   <div class="graph-card">
     <h2>Live Brightness</h2>
     <canvas id="brightness-graph"></canvas>
   </div>
 
+  <!-- Gallery -->
   <div class="gallery-card">
     <h2>Captured Photos <span id="count-badge">0</span></h2>
     <div id="gallery-grid">
@@ -329,6 +457,7 @@
 
 <script>
 (() => {
+  /* ── Elements ── */
   const video       = document.getElementById('camera-video');
   const analysisCvs = document.getElementById('analysis-canvas');
   const captCvs     = document.getElementById('capture-canvas');
@@ -336,7 +465,6 @@
   const noCam       = document.getElementById('no-camera');
   const dot         = document.getElementById('dot');
   const statusTxt   = document.getElementById('status-text');
-  const debugTxt    = document.getElementById('debug-txt');
   const captCount   = document.getElementById('capture-count');
   const countBadge  = document.getElementById('count-badge');
   const btnStart    = document.getElementById('btn-start');
@@ -357,7 +485,9 @@
   const analysisCtx = analysisCvs.getContext('2d', { willReadFrequently: true });
   const captCtx     = captCvs.getContext('2d');
   const graphCtx    = graphCvs.getContext('2d');
+  const debugTxt    = document.getElementById('debug-txt');
 
+  /* ── State ── */
   let stream          = null;
   let watching        = false;
   let rafId           = null;
@@ -367,31 +497,18 @@
   const HIST_LEN      = 200;
   let rollingAvg      = -1;
   const SMOOTH        = 0.05;
-  const MIN_ABS_DELTA = 18;
+  const MIN_ABS_DELTA = 18; // absolute brightness jump required (0-255) to filter camera noise
 
-  /* ── Persist photos in localStorage ── */
-  function savePhotosToStorage() {
-    try {
-      const data = photos.map(p => ({ dataUrl: p.dataUrl, ts: p.ts.toISOString() }));
-      localStorage.setItem('lightning_photos', JSON.stringify(data));
-    } catch (e) { /* storage full */ }
-  }
+  /* ── Burst-capture state ── */
+  let burstMode       = false;  // true while recording the 1-second flash window
+  let burstEndTime    = 0;      // performance.now() deadline for the burst
+  let burstFrameCount = 0;      // frames analysed in current burst (debug)
+  let burstSaved      = 0;      // flash frames saved in current burst
+  let burstBaseAvg    = 0;      // rollingAvg frozen at the moment of detection
+  const BURST_DURATION_MS = 1000; // 1-second window
+  const MAX_BURST_SAVES   = 5;    // cap: save at most 5 frames per burst
 
-  function loadPhotosFromStorage() {
-    try {
-      const raw = localStorage.getItem('lightning_photos');
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      data.forEach(p => {
-        const entry = { dataUrl: p.dataUrl, ts: new Date(p.ts) };
-        photos.push(entry);
-        addThumb(entry);
-      });
-      captCount.textContent  = photos.length;
-      countBadge.textContent = photos.length;
-    } catch (e) { localStorage.removeItem('lightning_photos'); }
-  }
-
+  /* ── Graph setup ── */
   function resizeGraph() {
     graphCvs.width  = graphCvs.offsetWidth;
     graphCvs.height = graphCvs.offsetHeight;
@@ -399,9 +516,15 @@
   resizeGraph();
   window.addEventListener('resize', resizeGraph);
 
-  threshSlide.addEventListener('input', () => { threshVal.textContent = threshSlide.value + '%'; });
-  coolSlide.addEventListener('input',   () => { coolVal.textContent   = coolSlide.value   + 's'; });
+  /* ── Slider labels ── */
+  threshSlide.addEventListener('input', () => {
+    threshVal.textContent = threshSlide.value + '%';
+  });
+  coolSlide.addEventListener('input', () => {
+    coolVal.textContent = coolSlide.value + 's';
+  });
 
+  /* ── Start / Stop ── */
   btnStart.addEventListener('click', startWatching);
   btnStop.addEventListener('click',  stopWatching);
 
@@ -412,10 +535,11 @@
         audio: false
       });
     } catch (err) {
+      // fall back to any camera
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       } catch (err2) {
-        setStatus('Camera access denied: ' + err2.message);
+        setStatus('Camera access denied: ' + err2.message, 'off');
         return;
       }
     }
@@ -425,53 +549,102 @@
     noCam.style.display = 'none';
     video.style.display = 'block';
 
-    analysisCvs.width  = 64;
+    analysisCvs.width  = 64;  // tiny for maximum speed
     analysisCvs.height = 36;
 
     watching        = true;
     rollingAvg      = -1;
     lastCaptureTime = 0;
     brightHistory   = [];
+    burstMode       = false;
+    burstSaved      = 0;
+    burstFrameCount = 0;
 
     btnStart.disabled = true;
     btnStop.disabled  = false;
     dot.className     = 'indicator watching';
-    setStatus('Watching for lightning\u2026');
+    setStatus('Watching for lightning…');
 
-    analyzeFrame();
+    analyzeFrame(); // kick off via rVFC or RAF
   }
 
   function stopWatching() {
     watching = false;
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-    video.srcObject = null;
     debugTxt.textContent = '';
+    video.srcObject = null;
     btnStart.disabled = false;
     btnStop.disabled  = true;
     dot.className     = 'indicator';
     setStatus('Camera off');
   }
 
+  /* ── Analysis — called on every real camera frame ── */
   function analyzeFrame() {
     if (!watching) return;
+
+    // Use requestVideoFrameCallback if available (fires on each new camera frame)
+    // Fall back to requestAnimationFrame
     if ('requestVideoFrameCallback' in video) {
       video.requestVideoFrameCallback(analyzeFrame);
     } else {
       rafId = requestAnimationFrame(analyzeFrame);
     }
+
     if (video.readyState < 2) return;
 
+    // Tiny canvas = fast pixel read (same path used by both normal detection & burst)
     analysisCtx.drawImage(video, 0, 0, analysisCvs.width, analysisCvs.height);
     const px = analysisCtx.getImageData(0, 0, analysisCvs.width, analysisCvs.height).data;
 
+    // Sample every 3rd pixel for speed
     let sum = 0, count = 0;
     for (let i = 0; i < px.length; i += 12) {
       sum += 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
       count++;
     }
-    const bright = sum / count;
+    const bright = sum / count; // 0–255
 
+    // ── Burst window: analyse each of the ~60 frames in the 1-second window ──
+    if (burstMode) {
+      const threshold = parseFloat(threshSlide.value) / 100;
+      // A frame qualifies as a "flash frame" when it is still well above the
+      // pre-flash baseline — use 40% of the user's sensitivity threshold so we
+      // catch the entire bolt without saving the dim tail frames.
+      const flashMin = Math.max(
+        burstBaseAvg + MIN_ABS_DELTA,
+        burstBaseAvg * (1 + threshold * 0.4)
+      );
+
+      if (bright >= flashMin && burstSaved < MAX_BURST_SAVES) {
+        saveBurstFrame();
+        burstSaved++;
+      }
+
+      burstFrameCount++;
+      brightHistory.push(bright);
+      if (brightHistory.length > HIST_LEN) brightHistory.shift();
+      drawGraph(bright, burstBaseAvg * (1 + threshold));
+      debugTxt.textContent =
+        `BURST ${burstFrameCount}fr | bright:${bright.toFixed(0)} | saved:${burstSaved}`;
+
+      if (performance.now() >= burstEndTime) {
+        burstMode = false;
+        const saved = burstSaved;
+        burstSaved = 0;
+        if (saved > 0) {
+          setStatus(`&#9889; Saved ${saved} flash frame${saved > 1 ? 's' : ''} — watching…`);
+          setTimeout(() => { if (!burstMode) setStatus('Watching for lightning…'); }, 3000);
+        } else {
+          setStatus('Burst complete — no flash frames found. Watching…');
+          setTimeout(() => { if (!burstMode) setStatus('Watching for lightning…'); }, 3000);
+        }
+      }
+      return;
+    }
+
+    // ── Normal detection ──
     if (rollingAvg < 0) { rollingAvg = bright; }
 
     const threshold   = parseFloat(threshSlide.value) / 100;
@@ -480,48 +653,79 @@
     const absDelta    = bright - rollingAvg;
     const spikeFactor = rollingAvg > 0 ? absDelta / rollingAvg : 0;
 
-    debugTxt.textContent = 'avg:' + rollingAvg.toFixed(0) + ' cur:' + bright.toFixed(0) + ' spike:' + (spikeFactor*100).toFixed(0) + '%';
+    // Scale the minimum absolute jump with ambient brightness so daytime
+    // fluctuations (clouds, reflections, auto-exposure) don't false-trigger.
+    // Night (avg≈20): floor stays at MIN_ABS_DELTA (18).
+    // Daytime (avg≈150): requires a 37-unit jump — genuine lightning still
+    // clears this easily; normal scene changes don't.
+    const minAbsDelta = Math.max(MIN_ABS_DELTA, rollingAvg * 0.25);
 
-    if (spikeFactor >= threshold && absDelta >= MIN_ABS_DELTA && (now - lastCaptureTime) > cooldownMs) {
+    debugTxt.textContent =
+      `avg:${rollingAvg.toFixed(0)} cur:${bright.toFixed(0)} ` +
+      `spike:${(spikeFactor*100).toFixed(0)}% minΔ:${minAbsDelta.toFixed(0)}`;
+
+    // Require BOTH a % spike AND a scaled absolute jump to avoid false triggers
+    if (spikeFactor >= threshold && absDelta >= minAbsDelta && (now - lastCaptureTime) > cooldownMs) {
       triggerCapture(bright, spikeFactor);
       lastCaptureTime = now;
     }
 
     rollingAvg = rollingAvg * (1 - SMOOTH) + bright * SMOOTH;
+
     brightHistory.push(bright);
     if (brightHistory.length > HIST_LEN) brightHistory.shift();
     drawGraph(bright, rollingAvg * (1 + threshold));
   }
 
+  /* ── Trigger: kick off a 1-second burst capture window ── */
   function triggerCapture(bright, factor) {
+    // Flash UI feedback
     dot.className = 'indicator triggered';
     flashOvr.classList.add('flashing');
-    setStatus('&#9889; Lightning detected! (+' + Math.round(factor*100) + '% spike)');
+    setStatus(`&#9889; Lightning detected! Analysing 1-second burst at 60 fps…`);
     setTimeout(() => {
       flashOvr.classList.remove('flashing');
       dot.className = 'indicator watching';
-      setStatus('Watching for lightning\u2026');
     }, 400);
 
+    // Freeze the pre-flash baseline so we can identify bright frames inside the burst
+    burstBaseAvg    = rollingAvg;
+    burstMode       = true;
+    burstEndTime    = performance.now() + BURST_DURATION_MS;
+    burstFrameCount = 0;
+    burstSaved      = 0;
+
+    // The current frame IS the trigger frame — save it immediately (it is the
+    // peak-brightness frame that fired detection).
+    saveBurstFrame();
+    burstSaved++;
+    burstFrameCount++;
+  }
+
+  /* ── Save one full-resolution flash frame to the gallery ── */
+  function saveBurstFrame() {
     const vw = video.videoWidth  || 1280;
     const vh = video.videoHeight || 720;
-    captCvs.width  = vw; captCvs.height = vh;
+    captCvs.width  = vw;
+    captCvs.height = vh;
     captCtx.save();
-    captCtx.translate(vw, 0); captCtx.scale(-1, 1);
+    captCtx.translate(vw, 0);
+    captCtx.scale(-1, 1);   // mirror to match preview
     captCtx.drawImage(video, 0, 0, vw, vh);
     captCtx.restore();
 
     const dataUrl = captCvs.toDataURL('image/png');
     const ts = new Date();
-    const entry = { dataUrl, ts };
-    photos.unshift(entry);
-    addThumb(entry);
+
+    photos.unshift({ dataUrl, ts });
+    addThumb(photos[0]);
     captCount.textContent  = photos.length;
     countBadge.textContent = photos.length;
-    savePhotosToStorage();
   }
 
-  function addThumb({ dataUrl, ts }) {
+  /* ── Gallery thumb ── */
+  function addThumb({ dataUrl, ts }, idx) {
+    // Remove empty msg
     const empty = galleryGrid.querySelector('.gallery-empty');
     if (empty) empty.remove();
 
@@ -529,37 +733,40 @@
     wrap.className = 'thumb-wrap';
 
     const img = document.createElement('img');
-    img.src = dataUrl; img.alt = 'Lightning capture';
+    img.src = dataUrl;
+    img.alt = 'Lightning capture';
 
     const label = document.createElement('div');
     label.className = 'thumb-ts';
     label.textContent = formatTime(ts);
 
-    const filename = 'lightning_' + ts.toISOString().replace(/[:.]/g,'-') + '.png';
+    const filename = `lightning_${ts.toISOString().replace(/[:.]/g,'-')}.png`;
     const dl = document.createElement('a');
-    dl.className = 'thumb-dl'; dl.href = dataUrl;
-    dl.download = filename; dl.textContent = '\u2193';
+    dl.className = 'thumb-dl';
+    dl.href = dataUrl;
+    dl.download = filename;
+    dl.textContent = '↓';
 
-    wrap.appendChild(img); wrap.appendChild(label); wrap.appendChild(dl);
+    wrap.appendChild(img);
+    wrap.appendChild(label);
+    wrap.appendChild(dl);
     galleryGrid.prepend(wrap);
 
     wrap.addEventListener('click', (e) => {
       if (e.target === dl) return;
-      lbImg.src     = dataUrl;
-      lbDl.href     = dataUrl;
-      lbDl.download = filename;
-      lbShare._cur  = { dataUrl, filename };
+      lbImg.src      = dataUrl;
+      lbDl.href      = dataUrl;
+      lbDl.download  = filename;
+      lbShare._file  = { dataUrl, filename };
       lightbox.classList.add('open');
     });
   }
 
+  /* ── Lightbox close ── */
   lbClose.addEventListener('click', () => lightbox.classList.remove('open'));
   lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.classList.remove('open'); });
 
-  lbShare.addEventListener('click', () => {
-    const cur = lbShare._cur;
-    if (cur) saveToPhotos(cur.dataUrl, cur.filename);
-  });
+  lbShare.addEventListener('click', () => saveToPhotos(lbImg.src, lbDl.download));
 
   async function saveToPhotos(dataUrl, filename) {
     if (navigator.share) {
@@ -570,54 +777,74 @@
         await navigator.share({ files: [file], title: 'Lightning capture' });
         return;
       } catch (e) {
-        if (e.name === 'AbortError') return;
+        if (e.name === 'AbortError') return; // user cancelled share sheet
       }
     }
-    // Fallback: download
+    // Fallback: trigger download
     const a = document.createElement('a');
     a.href = dataUrl; a.download = filename || 'lightning.png'; a.click();
   }
 
+  /* ── Clear gallery ── */
   btnClear.addEventListener('click', () => {
     photos = [];
     galleryGrid.innerHTML = '<p class="gallery-empty">No photos yet. Start watching and wait for lightning!</p>';
-    captCount.textContent = '0'; countBadge.textContent = '0';
-    localStorage.removeItem('lightning_photos');
+    captCount.textContent = '0';
+    countBadge.textContent = '0';
   });
 
+  /* ── Brightness Graph ── */
   function drawGraph(current, triggerLine) {
-    const W = graphCvs.width, H = graphCvs.height;
+    const W = graphCvs.width;
+    const H = graphCvs.height;
     graphCtx.clearRect(0, 0, W, H);
+
     if (brightHistory.length < 2) return;
-    const max = 255, xStep = W / (HIST_LEN - 1);
+
+    const max = 255;
+    const xStep = W / (HIST_LEN - 1);
+
+    // Trigger line
     const trigY = H - (triggerLine / max) * H;
-    graphCtx.strokeStyle = 'rgba(245,197,24,0.35)';
-    graphCtx.lineWidth = 1; graphCtx.setLineDash([4,4]);
-    graphCtx.beginPath(); graphCtx.moveTo(0, trigY); graphCtx.lineTo(W, trigY); graphCtx.stroke();
+    graphCtx.strokeStyle = 'rgba(245, 197, 24, 0.35)';
+    graphCtx.lineWidth = 1;
+    graphCtx.setLineDash([4, 4]);
+    graphCtx.beginPath();
+    graphCtx.moveTo(0, trigY);
+    graphCtx.lineTo(W, trigY);
+    graphCtx.stroke();
     graphCtx.setLineDash([]);
-    graphCtx.strokeStyle = '#4fc3f7'; graphCtx.lineWidth = 1.5;
+
+    // Brightness line
+    graphCtx.strokeStyle = '#4fc3f7';
+    graphCtx.lineWidth = 1.5;
     graphCtx.beginPath();
     brightHistory.forEach((v, i) => {
-      const x = i * xStep, y = H - (v / max) * H;
+      const x = i * xStep;
+      const y = H - (v / max) * H;
       i === 0 ? graphCtx.moveTo(x, y) : graphCtx.lineTo(x, y);
     });
     graphCtx.stroke();
+
+    // Current dot
     const lastX = (brightHistory.length - 1) * xStep;
     const lastY = H - (current / max) * H;
     graphCtx.fillStyle = '#4fc3f7';
-    graphCtx.beginPath(); graphCtx.arc(lastX, lastY, 3, 0, Math.PI*2); graphCtx.fill();
+    graphCtx.beginPath();
+    graphCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+    graphCtx.fill();
   }
 
+  /* ── Helpers ── */
   function setStatus(msg) { statusTxt.innerHTML = msg; }
+
   function formatTime(d) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  /* Show placeholder if no camera yet */
   noCam.style.display = 'flex';
   video.style.display = 'none';
-
-  // Load saved photos on startup
-  loadPhotosFromStorage();
 
 })();
 </script>

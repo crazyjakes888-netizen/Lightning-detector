@@ -653,11 +653,19 @@
     const absDelta    = bright - rollingAvg;
     const spikeFactor = rollingAvg > 0 ? absDelta / rollingAvg : 0;
 
-    // Show live numbers so you can see it's actually working
-    debugTxt.textContent = `avg:${rollingAvg.toFixed(0)} cur:${bright.toFixed(0)} spike:${(spikeFactor*100).toFixed(0)}%`;
+    // Scale the minimum absolute jump with ambient brightness so daytime
+    // fluctuations (clouds, reflections, auto-exposure) don't false-trigger.
+    // Night (avg≈20): floor stays at MIN_ABS_DELTA (18).
+    // Daytime (avg≈150): requires a 37-unit jump — genuine lightning still
+    // clears this easily; normal scene changes don't.
+    const minAbsDelta = Math.max(MIN_ABS_DELTA, rollingAvg * 0.25);
 
-    // Require BOTH a % spike AND a minimum absolute jump to avoid false triggers
-    if (spikeFactor >= threshold && absDelta >= MIN_ABS_DELTA && (now - lastCaptureTime) > cooldownMs) {
+    debugTxt.textContent =
+      `avg:${rollingAvg.toFixed(0)} cur:${bright.toFixed(0)} ` +
+      `spike:${(spikeFactor*100).toFixed(0)}% minΔ:${minAbsDelta.toFixed(0)}`;
+
+    // Require BOTH a % spike AND a scaled absolute jump to avoid false triggers
+    if (spikeFactor >= threshold && absDelta >= minAbsDelta && (now - lastCaptureTime) > cooldownMs) {
       triggerCapture(bright, spikeFactor);
       lastCaptureTime = now;
     }

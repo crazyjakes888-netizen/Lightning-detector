@@ -1126,15 +1126,18 @@
 
   function initHostPeer() {
     destroyPeer();
+    hostCodeEl.textContent   = '…';
+    hostStatusEl.textContent = 'Connecting to relay server…';
+
     const code = Math.random().toString(36).slice(2,8).toUpperCase();
-    hostCodeEl.textContent   = code;
-    hostStatusEl.textContent = 'Starting…';
 
     // Use the code as the PeerJS ID so the iPad can call it directly
     remotePeer = new Peer('LDCAM-' + code);
 
     remotePeer.on('open', () => {
-      hostStatusEl.textContent = 'Waiting for iPad to connect…';
+      // Only reveal the code once the peer is actually registered
+      hostCodeEl.textContent   = code;
+      hostStatusEl.textContent = 'Enter this code on your iPad now ↑';
     });
 
     remotePeer.on('call', call => {
@@ -1153,7 +1156,9 @@
       if (err.type === 'unavailable-id') {
         initHostPeer(); // code collision — retry with new code
       } else {
-        hostStatusEl.textContent = 'Error: ' + err.type;
+        hostCodeEl.textContent   = '✕';
+        hostStatusEl.textContent = 'Could not connect to relay (' + err.type + '). Retrying…';
+        setTimeout(initHostPeer, 3000);
       }
     });
   }

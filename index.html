@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lightning Detector</title>
+  <script defer src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -331,6 +332,69 @@
     }
     .thumb-wrap:hover .thumb-dl { opacity: 1; }
 
+    /* ── Remote Camera modal ── */
+    #remote-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.88); z-index: 1002;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    #remote-modal.open { display: flex; }
+
+    .remote-inner {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 22px 24px; width: 100%; max-width: 400px;
+    }
+
+    .remote-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    }
+    .remote-header h2 { font-size: 1rem; font-weight: 700; color: var(--accent); }
+    #remote-close {
+      background: none; border: none; font-size: 1.5rem;
+      color: var(--muted); cursor: pointer; padding: 2px 6px;
+    }
+
+    .remote-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+    .remote-tab {
+      flex: 1; padding: 8px 6px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--bg);
+      color: var(--muted); font-size: .82rem; font-weight: 600; cursor: pointer;
+    }
+    .remote-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+    .remote-panel { display: none; }
+    .remote-panel.active { display: block; }
+
+    .remote-code {
+      font-size: 2.4rem; font-weight: 700; letter-spacing: .25em;
+      color: var(--accent); text-align: center; font-family: monospace;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px; margin-bottom: 10px;
+    }
+
+    .remote-hint {
+      font-size: .8rem; color: var(--muted); text-align: center;
+      line-height: 1.5; margin-bottom: 12px;
+    }
+
+    .remote-status-line {
+      font-size: .8rem; color: var(--muted); text-align: center; min-height: 1.1em;
+    }
+
+    .remote-code-input {
+      display: block; width: 100%; padding: 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--bg); color: var(--text);
+      font-size: 1.3rem; letter-spacing: .2em; text-align: center;
+      font-family: monospace; text-transform: uppercase; margin-bottom: 10px;
+    }
+
+    .btn-stream {
+      width: 100%; background: var(--accent); color: #000;
+      padding: 10px; font-size: .95rem; font-weight: 700;
+      border: none; border-radius: 8px; cursor: pointer; margin-bottom: 10px;
+    }
+    .btn-stream:hover { filter: brightness(1.1); }
+
     /* ── Analytics modal ── */
     #analytics-modal {
       display: none;
@@ -528,6 +592,7 @@
       <button id="btn-start">&#9654; Start Watching</button>
       <button id="btn-stop" disabled>&#9632; Stop</button>
       <button id="btn-analytics">&#128200; Analytics</button>
+      <button id="btn-remote">&#128247; Remote Cam</button>
       <button id="btn-clear">Clear Photos</button>
     </div>
 
@@ -548,6 +613,39 @@
   </div>
 
 </main>
+
+<!-- Remote Camera Modal -->
+<div id="remote-modal">
+  <div class="remote-inner">
+    <div class="remote-header">
+      <h2>&#128247; Remote Camera</h2>
+      <button id="remote-close">&times;</button>
+    </div>
+
+    <div class="remote-tabs">
+      <button class="remote-tab active" data-tab="host">&#128187; Receive (this device)</button>
+      <button class="remote-tab" data-tab="cam">&#128247; Stream (iPad/phone)</button>
+    </div>
+
+    <!-- Host / Receive panel -->
+    <div class="remote-panel active" id="panel-host">
+      <div class="remote-code" id="host-code">––––––</div>
+      <p class="remote-hint">
+        Open this site on your iPad, tap <strong>Remote Cam → Stream</strong>,
+        and enter the code above.
+      </p>
+      <div class="remote-status-line" id="host-status">Generating code…</div>
+    </div>
+
+    <!-- Camera / Stream panel -->
+    <div class="remote-panel" id="panel-cam">
+      <p class="remote-hint">Enter the code shown on the receiving device:</p>
+      <input class="remote-code-input" id="cam-code-input" maxlength="6" placeholder="XXXXXX" />
+      <button class="btn-stream" id="btn-cam-stream">Start Streaming</button>
+      <div class="remote-status-line" id="cam-status"></div>
+    </div>
+  </div>
+</div>
 
 <!-- Analytics Modal -->
 <div id="analytics-modal">
@@ -987,6 +1085,133 @@
     graphCtx.beginPath();
     graphCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
     graphCtx.fill();
+  }
+
+  /* ── Remote Camera (WebRTC via PeerJS) ── */
+  const btnRemote    = document.getElementById('btn-remote');
+  const remoteModal  = document.getElementById('remote-modal');
+  const remoteClose  = document.getElementById('remote-close');
+  const hostCodeEl   = document.getElementById('host-code');
+  const hostStatusEl = document.getElementById('host-status');
+  const camCodeInput = document.getElementById('cam-code-input');
+  const btnCamStream = document.getElementById('btn-cam-stream');
+  const camStatusEl  = document.getElementById('cam-status');
+  let   remotePeer   = null;
+
+  function destroyPeer() {
+    if (remotePeer) { try { remotePeer.destroy(); } catch(e){} remotePeer = null; }
+  }
+
+  // Tab switching
+  document.querySelectorAll('.remote-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.remote-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.remote-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'host') initHostPeer();
+      if (btn.dataset.tab === 'cam')  destroyPeer();
+    });
+  });
+
+  btnRemote.addEventListener('click', () => {
+    remoteModal.classList.add('open');
+    initHostPeer();
+  });
+  remoteClose.addEventListener('click', () => remoteModal.classList.remove('open'));
+  remoteModal.addEventListener('click', e => { if (e.target === remoteModal) remoteModal.classList.remove('open'); });
+
+  function initHostPeer() {
+    destroyPeer();
+    const code = Math.random().toString(36).slice(2,8).toUpperCase();
+    hostCodeEl.textContent   = code;
+    hostStatusEl.textContent = 'Starting…';
+
+    // Use the code as the PeerJS ID so the iPad can call it directly
+    remotePeer = new Peer('LDCAM-' + code);
+
+    remotePeer.on('open', () => {
+      hostStatusEl.textContent = 'Waiting for iPad to connect…';
+    });
+
+    remotePeer.on('call', call => {
+      call.answer(); // receive-only — no local stream sent back
+      hostStatusEl.textContent = 'Connecting…';
+      call.on('stream', incoming => {
+        hostStatusEl.textContent = '✓ Connected!';
+        activateRemoteStream(incoming);
+        setTimeout(() => remoteModal.classList.remove('open'), 800);
+      });
+      call.on('error', e  => { hostStatusEl.textContent = 'Stream error.'; });
+      call.on('close', () => { setStatus('Remote stream ended. Watching…'); });
+    });
+
+    remotePeer.on('error', err => {
+      if (err.type === 'unavailable-id') {
+        initHostPeer(); // code collision — retry with new code
+      } else {
+        hostStatusEl.textContent = 'Error: ' + err.type;
+      }
+    });
+  }
+
+  btnCamStream.addEventListener('click', async () => {
+    const code = camCodeInput.value.replace(/\s/g,'').toUpperCase().slice(0,6);
+    if (code.length < 6) { camStatusEl.textContent = 'Enter the full 6-character code.'; return; }
+
+    camStatusEl.textContent = 'Starting camera…';
+    let camStream;
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
+        audio: false
+      });
+    } catch (e) {
+      camStatusEl.textContent = 'Camera permission denied.';
+      return;
+    }
+
+    camStatusEl.textContent = 'Connecting to PC…';
+    destroyPeer();
+    remotePeer = new Peer();
+
+    remotePeer.on('open', () => {
+      const call = remotePeer.call('LDCAM-' + code, camStream);
+      if (!call) { camStatusEl.textContent = 'Could not reach PC — check the code.'; return; }
+      call.on('stream', () => {}); // PC may send empty stream back — ignore
+      call.on('error',  () => { camStatusEl.textContent = 'Connection lost.'; });
+      camStatusEl.textContent = '✓ Streaming! Keep this page open.';
+    });
+
+    remotePeer.on('error', err => {
+      camStatusEl.textContent = 'Error: ' + err.type + ' — check the code and try again.';
+    });
+  });
+
+  function activateRemoteStream(incoming) {
+    video.srcObject = incoming;
+    if (watching) {
+      setStatus('Remote camera active — watching for lightning…');
+      return;
+    }
+    // Auto-start detection on the remote stream
+    video.play().catch(() => {});
+    noCam.style.display  = 'none';
+    video.style.display  = 'block';
+    analysisCvs.width    = 64;
+    analysisCvs.height   = 36;
+    watching        = true;
+    rollingAvg      = -1;
+    lastCaptureTime = 0;
+    brightHistory   = [];
+    burstMode       = false;
+    burstSaved      = 0;
+    burstFrameCount = 0;
+    btnStart.disabled = true;
+    btnStop.disabled  = false;
+    dot.className     = 'indicator watching';
+    setStatus('Remote camera active — watching for lightning…');
+    analyzeFrame();
   }
 
   /* ── Analytics ── */

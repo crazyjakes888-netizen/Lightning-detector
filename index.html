@@ -1106,20 +1106,31 @@
   }
 
   // Tab switching
+  function switchTab(tab) {
+    document.querySelectorAll('.remote-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.remote-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+    localStorage.setItem('ld_role', tab);
+    if (tab === 'host') initHostPeer();
+    if (tab === 'cam')  destroyPeer();
+  }
+
   document.querySelectorAll('.remote-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.remote-tab').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.remote-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-      if (btn.dataset.tab === 'host') initHostPeer();
-      if (btn.dataset.tab === 'cam')  destroyPeer();
-    });
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
   btnRemote.addEventListener('click', () => {
     remoteModal.classList.add('open');
-    initHostPeer();
+    const savedRole = localStorage.getItem('ld_role') || 'host';
+    const savedCode = localStorage.getItem('ld_cam_code');
+
+    if (savedRole === 'cam' && savedCode) {
+      // iPad: auto-switch to stream tab and connect with saved code
+      switchTab('cam');
+      camCodeInput.value = savedCode;
+      setTimeout(() => btnCamStream.click(), 400);
+    } else {
+      switchTab('host');
+    }
   });
   remoteClose.addEventListener('click', () => remoteModal.classList.remove('open'));
   remoteModal.addEventListener('click', e => { if (e.target === remoteModal) remoteModal.classList.remove('open'); });
@@ -1129,7 +1140,12 @@
     hostCodeEl.textContent   = '…';
     hostStatusEl.textContent = 'Connecting to relay server…';
 
-    const code = Math.random().toString(36).slice(2,8).toUpperCase();
+    // Reuse the same code every time — iPad never needs to re-enter it
+    let code = localStorage.getItem('ld_host_code');
+    if (!code || code.length !== 6) {
+      code = Math.random().toString(36).slice(2,8).toUpperCase();
+      localStorage.setItem('ld_host_code', code);
+    }
 
     // Use the code as the PeerJS ID so the iPad can call it directly
     remotePeer = new Peer('LDCAM-' + code);
@@ -1137,7 +1153,7 @@
     remotePeer.on('open', () => {
       // Only reveal the code once the peer is actually registered
       hostCodeEl.textContent   = code;
-      hostStatusEl.textContent = 'Enter this code on your iPad now ↑';
+      hostStatusEl.textContent = 'Enter this code on your iPad once — it\'ll auto-connect after that ↑';
     });
 
     remotePeer.on('call', call => {
@@ -1154,7 +1170,9 @@
 
     remotePeer.on('error', err => {
       if (err.type === 'unavailable-id') {
-        initHostPeer(); // code collision — retry with new code
+        // Someone else has this code — generate a new permanent one
+        localStorage.removeItem('ld_host_code');
+        initHostPeer();
       } else {
         hostCodeEl.textContent   = '✕';
         hostStatusEl.textContent = 'Could not connect to relay (' + err.type + '). Retrying…';
@@ -1192,9 +1210,12 @@
     remotePeer.on('open', () => {
       const call = remotePeer.call('LDCAM-' + code, camStream);
       if (!call) { camStatusEl.textContent = 'Could not reach PC — check the code.'; return; }
-      call.on('stream', () => {}); // PC may send empty stream back — ignore
+      call.on('stream', () => {});
       call.on('error',  () => { camStatusEl.textContent = 'Connection lost.'; });
-      camStatusEl.textContent = '✓ Streaming! Keep this page open.';
+      // Save code and role so next time it auto-connects with no input needed
+      localStorage.setItem('ld_cam_code', code);
+      localStorage.setItem('ld_role', 'cam');
+      camStatusEl.textContent = '✓ Streaming! Next time this will auto-connect.';
     });
 
     remotePeer.on('error', err => {

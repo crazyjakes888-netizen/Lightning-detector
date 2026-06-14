@@ -812,12 +812,12 @@
     dot.className     = 'indicator watching';
     setStatus('Watching for lightning…');
 
-    analyzeFrame(); // kick off via rVFC or RAF
+    rafId = setInterval(analyzeFrame, 1000 / 120); // 120 checks per second
   }
 
   function stopWatching() {
     watching = false;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (rafId) { clearInterval(rafId); rafId = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     debugTxt.textContent = '';
     video.srcObject = null;
@@ -830,14 +830,6 @@
   /* ── Analysis — called on every real camera frame ── */
   function analyzeFrame() {
     if (!watching) return;
-
-    // Use requestVideoFrameCallback if available (fires on each new camera frame)
-    // Fall back to requestAnimationFrame
-    if ('requestVideoFrameCallback' in video) {
-      video.requestVideoFrameCallback(analyzeFrame);
-    } else {
-      rafId = requestAnimationFrame(analyzeFrame);
-    }
 
     if (video.readyState < 2) return;
 

@@ -538,6 +538,138 @@
       font-weight: 700;
       font-size: .9rem;
     }
+
+    /* ── Polished secondary buttons ── */
+    #btn-analytics, #btn-remote {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    /* ── Toggle buttons (sound / alerts / fullscreen) ── */
+    .btn-toggle {
+      background: var(--border);
+      color: var(--muted);
+    }
+    .btn-toggle.on {
+      background: var(--accent2);
+      color: #00131c;
+    }
+
+    /* ── Sensitivity presets ── */
+    .preset-row {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .preset-label {
+      font-size: .72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-right: 4px;
+    }
+    .preset-btn {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      font-size: .82rem;
+    }
+    .preset-btn.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    /* ── Storm intensity meter ── */
+    .intensity-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .8rem;
+      margin-top: 12px;
+    }
+    .intensity-bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 5px;
+      background: var(--bg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .intensity-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #4caf50, var(--accent), var(--danger));
+      transition: width .5s ease;
+    }
+    .intensity-label {
+      min-width: 92px;
+      text-align: right;
+      font-weight: 600;
+      color: var(--accent2);
+    }
+
+    /* ── Gallery actions + thumb intensity badge ── */
+    .gallery-actions { margin-left: auto; display: flex; gap: 8px; }
+    .btn-mini {
+      font-size: .72rem;
+      padding: 5px 12px;
+      background: var(--border);
+      color: var(--accent2);
+      font-weight: 600;
+    }
+    .thumb-intensity {
+      position: absolute;
+      top: 4px; left: 4px;
+      background: rgba(0,0,0,.65);
+      color: var(--accent);
+      font-size: .66rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+
+    /* ── Toast notifications ── */
+    #toast-container {
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
+      z-index: 2000;
+      align-items: center;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: .85rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .25s, transform .25s;
+      max-width: 90vw;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Header glow ── */
+    header .bolt {
+      filter: drop-shadow(0 0 6px rgba(245,197,24,.7));
+      animation: boltGlow 3s ease-in-out infinite;
+    }
+    @keyframes boltGlow {
+      0%, 100% { filter: drop-shadow(0 0 4px rgba(245,197,24,.5)); }
+      50%      { filter: drop-shadow(0 0 11px rgba(245,197,24,.95)); }
+    }
   </style>
 </head>
 <body>
@@ -588,9 +720,20 @@
       </div>
     </div>
 
+    <!-- Sensitivity presets -->
+    <div class="preset-row">
+      <span class="preset-label">Presets</span>
+      <button class="preset-btn" data-preset="night">&#127769; Night</button>
+      <button class="preset-btn" data-preset="day">&#9728;&#65039; Day</button>
+      <button class="preset-btn" data-preset="storm">&#9928;&#65039; Storm</button>
+    </div>
+
     <div class="btn-row">
       <button id="btn-start">&#9654; Start Watching</button>
       <button id="btn-stop" disabled>&#9632; Stop</button>
+      <button id="btn-sound" class="btn-toggle">&#128277; Sound Off</button>
+      <button id="btn-notify" class="btn-toggle">&#128277; Alerts Off</button>
+      <button id="btn-fullscreen" class="btn-toggle">&#9974; Fullscreen</button>
       <button id="btn-analytics">&#128200; Analytics</button>
       <button id="btn-remote">&#128247; Remote Cam</button>
       <button id="btn-clear">Clear Photos</button>
@@ -602,11 +745,20 @@
   <div class="graph-card">
     <h2>Live Brightness</h2>
     <canvas id="brightness-graph"></canvas>
+    <div class="intensity-wrap">
+      <span class="preset-label" style="margin:0">Storm</span>
+      <div class="intensity-bar"><div class="intensity-fill" id="intensity-fill"></div></div>
+      <span class="intensity-label" id="intensity-label">Calm</span>
+    </div>
   </div>
 
   <!-- Gallery -->
   <div class="gallery-card">
-    <h2>Captured Photos <span id="count-badge">0</span></h2>
+    <h2>Captured Photos <span id="count-badge">0</span>
+      <span class="gallery-actions">
+        <button class="btn-mini" id="btn-download-all">&#8595; Download All</button>
+      </span>
+    </h2>
     <div id="gallery-grid">
       <p class="gallery-empty">No photos yet. Start watching and wait for lightning!</p>
     </div>
@@ -694,6 +846,8 @@
   </div>
 </div>
 
+<div id="toast-container"></div>
+
 <canvas id="capture-canvas" style="display:none"></canvas>
 
 <script>
@@ -722,6 +876,15 @@
   const lbDl        = document.getElementById('lightbox-dl');
   const lbShare     = document.getElementById('lightbox-share');
   const lbClose     = document.getElementById('lightbox-close');
+  const btnSound    = document.getElementById('btn-sound');
+  const btnNotify   = document.getElementById('btn-notify');
+  const btnFull     = document.getElementById('btn-fullscreen');
+  const btnDlAll    = document.getElementById('btn-download-all');
+  const intensFill  = document.getElementById('intensity-fill');
+  const intensLabel = document.getElementById('intensity-label');
+  const presetBtns  = document.querySelectorAll('.preset-btn');
+  const toastBox    = document.getElementById('toast-container');
+  const cameraCard  = document.querySelector('.camera-card');
 
   const analysisCtx = analysisCvs.getContext('2d', { willReadFrequently: true });
   const captCtx     = captCvs.getContext('2d');
@@ -739,6 +902,19 @@
   let rollingAvg      = -1;
   const SMOOTH        = 0.05;
   const MIN_ABS_DELTA = 18; // absolute brightness jump required (0-255) to filter camera noise
+
+  /* ── Alerts / settings / storm-rate state ── */
+  let soundOn            = false;
+  let notifyOn           = false;
+  let audioCtx           = null;
+  let strikeTimes        = [];  // Date.now() of recent strikes (for storm-rate gauge)
+  let lastStrikeIntensity = 0;  // spike % of the most recent strike (for thumb badge)
+  const SETTINGS_KEY     = 'ld_settings';
+  const PRESETS = {
+    night: { threshold: 12, cooldown: 2, label: 'Night' },
+    day:   { threshold: 30, cooldown: 3, label: 'Day' },
+    storm: { threshold: 18, cooldown: 1, label: 'Storm' }
+  };
 
   /* ── Session analytics state ── */
   const sessionStart      = Date.now();
@@ -766,9 +942,13 @@
   /* ── Slider labels ── */
   threshSlide.addEventListener('input', () => {
     threshVal.textContent = threshSlide.value + '%';
+    clearActivePreset();
+    saveSettings();
   });
   coolSlide.addEventListener('input', () => {
     coolVal.textContent = coolSlide.value + 's';
+    clearActivePreset();
+    saveSettings();
   });
 
   /* ── Start / Stop ── */
@@ -928,7 +1108,15 @@
     // Flash UI feedback
     dot.className = 'indicator triggered';
     flashOvr.classList.add('flashing');
-    setStatus(`&#9889; Lightning detected! Analysing 1-second burst at 60 fps…`);
+    setStatus(`&#9889; Lightning detected! Capturing high-speed burst…`);
+
+    // Alerts + storm-rate bookkeeping
+    lastStrikeIntensity = Math.round(factor * 100);
+    strikeTimes.push(Date.now());
+    beep();
+    notify('⚡ Lightning detected!', `Brightness spike ${lastStrikeIntensity}% — capturing burst`);
+    updateStormIntensity();
+
     setTimeout(() => {
       flashOvr.classList.remove('flashing');
       dot.className = 'indicator watching';
@@ -964,14 +1152,14 @@
     const ts = new Date();
 
     sessionCaptures.push((Date.now() - sessionStart) / 1000);
-    photos.unshift({ dataUrl, ts });
+    photos.unshift({ dataUrl, ts, intensity: lastStrikeIntensity });
     addThumb(photos[0]);
     captCount.textContent  = photos.length;
     countBadge.textContent = photos.length;
   }
 
   /* ── Gallery thumb ── */
-  function addThumb({ dataUrl, ts }, idx) {
+  function addThumb({ dataUrl, ts, intensity }, idx) {
     // Remove empty msg
     const empty = galleryGrid.querySelector('.gallery-empty');
     if (empty) empty.remove();
@@ -987,6 +1175,13 @@
     label.className = 'thumb-ts';
     label.textContent = formatTime(ts);
 
+    let badge = null;
+    if (intensity != null && intensity > 0) {
+      badge = document.createElement('div');
+      badge.className = 'thumb-intensity';
+      badge.innerHTML = '&#9889; ' + intensity + '%';
+    }
+
     const filename = `lightning_${ts.toISOString().replace(/[:.]/g,'-')}.png`;
     const dl = document.createElement('a');
     dl.className = 'thumb-dl';
@@ -996,6 +1191,7 @@
 
     wrap.appendChild(img);
     wrap.appendChild(label);
+    if (badge) wrap.appendChild(badge);
     wrap.appendChild(dl);
     galleryGrid.prepend(wrap);
 
@@ -1377,6 +1573,170 @@
     sessionGraphCtx.stroke();
   }
 
+  /* ── Toast notifications ── */
+  function toast(msg, ms = 2600) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    toastBox.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 300);
+    }, ms);
+  }
+
+  /* ── Sound alert (Web Audio "thunder" chirp) ── */
+  function beep() {
+    if (!soundOn) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(880, audioCtx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.35);
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
+      o.start();
+      o.stop(audioCtx.currentTime + 0.45);
+    } catch (e) {}
+  }
+
+  /* ── Browser notification ── */
+  function notify(title, body) {
+    if (!notifyOn || !('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      try { new Notification(title, { body }); } catch (e) {}
+    }
+  }
+
+  /* ── Settings persistence ── */
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        threshold: threshSlide.value,
+        cooldown:  coolSlide.value,
+        soundOn, notifyOn
+      }));
+    } catch (e) {}
+  }
+  function loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      if (s.threshold) { threshSlide.value = s.threshold; threshVal.textContent = s.threshold + '%'; }
+      if (s.cooldown)  { coolSlide.value  = s.cooldown;  coolVal.textContent  = s.cooldown + 's'; }
+      soundOn  = !!s.soundOn;
+      notifyOn = !!s.notifyOn && ('Notification' in window) && Notification.permission === 'granted';
+    } catch (e) {}
+    updateToggleUI();
+  }
+
+  function updateToggleUI() {
+    btnSound.classList.toggle('on', soundOn);
+    btnSound.innerHTML  = soundOn  ? '&#128276; Sound On'  : '&#128277; Sound Off';
+    btnNotify.classList.toggle('on', notifyOn);
+    btnNotify.innerHTML = notifyOn ? '&#128276; Alerts On' : '&#128277; Alerts Off';
+  }
+
+  /* ── Toggle buttons ── */
+  btnSound.addEventListener('click', () => {
+    soundOn = !soundOn;
+    if (soundOn) { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); beep(); }
+    updateToggleUI(); saveSettings();
+    toast(soundOn ? 'Sound alerts on' : 'Sound alerts off');
+  });
+
+  btnNotify.addEventListener('click', async () => {
+    if (!('Notification' in window)) { toast('Notifications not supported here'); return; }
+    if (!notifyOn) {
+      let perm = Notification.permission;
+      if (perm === 'default') perm = await Notification.requestPermission();
+      if (perm !== 'granted') { toast('Notification permission denied'); return; }
+      notifyOn = true;
+    } else {
+      notifyOn = false;
+    }
+    updateToggleUI(); saveSettings();
+    toast(notifyOn ? 'Browser alerts on' : 'Browser alerts off');
+  });
+
+  /* ── Fullscreen ── */
+  btnFull.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      (cameraCard.requestFullscreen || cameraCard.webkitRequestFullscreen || (() => {})).call(cameraCard);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    btnFull.classList.toggle('on', !!document.fullscreenElement);
+  });
+
+  /* ── Sensitivity presets ── */
+  function clearActivePreset() {
+    presetBtns.forEach(b => b.classList.remove('active'));
+  }
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[btn.dataset.preset];
+      if (!p) return;
+      threshSlide.value = p.threshold; threshVal.textContent = p.threshold + '%';
+      coolSlide.value   = p.cooldown;  coolVal.textContent   = p.cooldown + 's';
+      clearActivePreset();
+      btn.classList.add('active');
+      saveSettings();
+      toast(p.label + ' preset applied');
+    });
+  });
+
+  /* ── Download all photos ── */
+  btnDlAll.addEventListener('click', () => {
+    if (!photos.length) { toast('No photos to download yet'); return; }
+    toast('Downloading ' + photos.length + ' photo' + (photos.length > 1 ? 's' : '') + '…');
+    photos.forEach((p, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = p.dataUrl;
+        a.download = `lightning_${p.ts.toISOString().replace(/[:.]/g,'-')}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, i * 300);
+    });
+  });
+
+  /* ── Storm intensity gauge (strikes per minute) ── */
+  function updateStormIntensity() {
+    const now = Date.now();
+    strikeTimes = strikeTimes.filter(t => now - t < 60000); // keep last minute
+    const rate = strikeTimes.length;
+    let pct, label;
+    if      (rate === 0)  { pct = 0;   label = 'Calm'; }
+    else if (rate <= 2)   { pct = 25;  label = 'Light'; }
+    else if (rate <= 5)   { pct = 50;  label = 'Active'; }
+    else if (rate <= 10)  { pct = 75;  label = 'Strong'; }
+    else                  { pct = 100; label = 'Severe'; }
+    intensFill.style.width = pct + '%';
+    intensLabel.textContent = rate > 0 ? `${label} · ${rate}/min` : 'Calm';
+  }
+  setInterval(updateStormIntensity, 2000);
+
+  /* ── Keyboard shortcuts ── */
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      watching ? stopWatching() : startWatching();
+    } else if (e.key === 'f' || e.key === 'F') {
+      btnFull.click();
+    } else if (e.key === 'a' || e.key === 'A') {
+      btnAnalytics.click();
+    }
+  });
+
   /* ── Helpers ── */
   function setStatus(msg) { statusTxt.innerHTML = msg; }
 
@@ -1387,6 +1747,8 @@
   /* Show placeholder if no camera yet */
   noCam.style.display = 'flex';
   video.style.display = 'none';
+
+  loadSettings();
 
 })();
 </script>

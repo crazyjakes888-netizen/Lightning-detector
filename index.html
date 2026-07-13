@@ -55,6 +55,17 @@
       color: var(--muted);
     }
 
+    header .nav-link {
+      color: var(--accent2);
+      text-decoration: none;
+      font-size: .85rem;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+    header .nav-link:hover { border-color: var(--accent2); }
+
     main {
       width: 100%;
       max-width: 960px;
@@ -546,6 +557,7 @@
   <span class="bolt">&#9889;</span>
   <h1>Lightning Detector</h1>
   <p>Auto-captures on brightness spike</p>
+  <a class="nav-link" href="api.html">&#9928;&#65039; Storm API</a>
 </header>
 
 <main>
